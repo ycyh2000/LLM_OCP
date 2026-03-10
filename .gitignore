@@ -1,0 +1,20 @@
+# model / checkpoint
+*.pt
+*.pth
+*.bin
+*.ckpt
+*.safetensors
+
+# training outputs
+examples/NLG/log/
+examples/NLG/trained_models/
+examples/NLG/pretrained_checkpoints/
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+
+# misc
+*.swp
+.DS_Store
