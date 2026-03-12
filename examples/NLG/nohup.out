@@ -1,0 +1,159 @@
+/home/ycyh/miniconda3/envs/LoRA/bin/python3.11: can't open file '/home/ycyh/code/LLM/LoRA-main/LoRA-main/examples/NLG/env': [Errno 2] No such file or directory
+E0311 13:04:37.343000 2271456 site-packages/torch/distributed/elastic/multiprocessing/api.py:874] failed (exitcode: 2) local_rank: 0 (pid: 2271538) of binary: /home/ycyh/miniconda3/envs/LoRA/bin/python3.11
+Traceback (most recent call last):
+  File "/home/ycyh/miniconda3/envs/LoRA/bin/torchrun", line 7, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/run.py", line 892, in main
+    run(args)
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/run.py", line 883, in run
+    elastic_launch(
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 139, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 270, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+env FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-03-11_13:04:37
+  host      : h3c
+  rank      : 0 (local_rank: 0)
+  exitcode  : 2 (pid: 2271538)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+/home/ycyh/miniconda3/envs/LoRA/bin/python3.11: can't open file '/home/ycyh/code/LLM/LoRA-main/LoRA-main/examples/NLG/env': [Errno 2] No such file or directory
+E0311 13:06:24.877000 2272419 site-packages/torch/distributed/elastic/multiprocessing/api.py:874] failed (exitcode: 2) local_rank: 0 (pid: 2272520) of binary: /home/ycyh/miniconda3/envs/LoRA/bin/python3.11
+Traceback (most recent call last):
+  File "/home/ycyh/miniconda3/envs/LoRA/bin/torchrun", line 7, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/run.py", line 892, in main
+    run(args)
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/run.py", line 883, in run
+    elastic_launch(
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 139, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 270, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+env FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-03-11_13:06:24
+  host      : h3c
+  rank      : 0 (local_rank: 0)
+  exitcode  : 2 (pid: 2272520)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+/home/ycyh/miniconda3/envs/LoRA/bin/python3.11: can't open file '/home/ycyh/code/LLM/LoRA-main/LoRA-main/examples/NLG/env': [Errno 2] No such file or directory
+E0311 13:08:19.676000 2273465 site-packages/torch/distributed/elastic/multiprocessing/api.py:874] failed (exitcode: 2) local_rank: 0 (pid: 2273545) of binary: /home/ycyh/miniconda3/envs/LoRA/bin/python3.11
+Traceback (most recent call last):
+  File "/home/ycyh/miniconda3/envs/LoRA/bin/torchrun", line 7, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/run.py", line 892, in main
+    run(args)
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/run.py", line 883, in run
+    elastic_launch(
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 139, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 270, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+env FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-03-11_13:08:19
+  host      : h3c
+  rank      : 0 (local_rank: 0)
+  exitcode  : 2 (pid: 2273545)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+usage: gpt2_ft.py [-h] [--platform PLATFORM] [--local_rank LOCAL_RANK]
+                  [--rank RANK] [--device DEVICE] [--world_size WORLD_SIZE]
+                  [--random_seed RANDOM_SEED] [--lr LR]
+                  [--weight_decay WEIGHT_DECAY] [--correct_bias]
+                  [--adam_epislon ADAM_EPISLON] [--no_decay_bias]
+                  [--adam_beta1 ADAM_BETA1] [--adam_beta2 ADAM_BETA2]
+                  [--scheduler {cosine,inv_sqrt,dev_perf,constant,linear,cycle,None}]
+                  [--max_step MAX_STEP] [--max_epoch MAX_EPOCH]
+                  [--warmup_step WARMUP_STEP] [--i_steps I_STEPS]
+                  [--i_lrs I_LRS] --train_data TRAIN_DATA --valid_data
+                  VALID_DATA [--train_batch_size TRAIN_BATCH_SIZE]
+                  [--valid_batch_size VALID_BATCH_SIZE] [--grad_acc GRAD_ACC]
+                  [--clip CLIP] [--seq_len SEQ_LEN]
+                  [--model_card {gpt2.sm,gpt2.md,gpt2.lg}]
+                  [--init_checkpoint INIT_CHECKPOINT] [--fp16]
+                  [--log_interval LOG_INTERVAL]
+                  [--eval_interval EVAL_INTERVAL]
+                  [--save_interval SAVE_INTERVAL] [--work_dir WORK_DIR]
+                  [--lora_dim LORA_DIM] [--lora_alpha LORA_ALPHA]
+                  [--obj {jlm,clm}] [--lora_dropout LORA_DROPOUT]
+                  [--label_smooth LABEL_SMOOTH]
+                  [--roll_interval ROLL_INTERVAL] [--roll_lr ROLL_LR]
+                  [--roll_step ROLL_STEP] [--eval_epoch EVAL_EPOCH]
+gpt2_ft.py: error: unrecognized arguments: 1
+E0311 13:09:29.653000 2274111 site-packages/torch/distributed/elastic/multiprocessing/api.py:874] failed (exitcode: 2) local_rank: 0 (pid: 2274189) of binary: /home/ycyh/miniconda3/envs/LoRA/bin/python3.11
+Traceback (most recent call last):
+  File "/home/ycyh/miniconda3/envs/LoRA/bin/torchrun", line 7, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/run.py", line 892, in main
+    run(args)
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/run.py", line 883, in run
+    elastic_launch(
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 139, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 270, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+src/gpt2_ft.py FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-03-11_13:09:29
+  host      : h3c
+  rank      : 0 (local_rank: 0)
+  exitcode  : 2 (pid: 2274189)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

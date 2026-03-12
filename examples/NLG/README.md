@@ -49,7 +49,7 @@ There are several directories in this repo:
 
 1. Train GPT-2 Medium with LoRA (see our paper for hyperparameters for GPT-2 Medium)
 ```
-torchrun --nproc_per_node=1 src/gpt2_ft.py \
+nohup env CUDA_VISIBLE_DEVICES=1 torchrun --nproc_per_node=1 src/gpt2_ft.py \
     --train_data ./data/e2e/train.jsonl \
     --valid_data ./data/e2e/valid.jsonl \
     --train_batch_size 8 \
@@ -73,7 +73,7 @@ torchrun --nproc_per_node=1 src/gpt2_ft.py \
     --lora_dropout 0.1 \
     --label_smooth 0.1 \
     --work_dir ./trained_models/GPT2_M/e2e \
-    --random_seed 110 
+    --random_seed 110 > training_0.0005_loraWithNormalization.log 2>&1 &
 ```
 
 2. Generate outputs from the trained model using beam search:

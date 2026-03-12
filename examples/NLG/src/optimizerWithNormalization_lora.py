@@ -18,7 +18,6 @@ from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 
 def add_optimizer_params(parser: argparse.ArgumentParser):
     parser.add_argument('--lr', default=0.00001, type=float, help='learning rate')
-    parser.add_argument('--r', default=3, type=float, help='alpha')
     parser.add_argument('--weight_decay', default=0.01, type=float, help='weight decay rate')
     parser.add_argument('--correct_bias', action='store_true', help='correct adam bias term')
     parser.add_argument('--adam_epislon', default=1e-6, type=float, help='adam epsilon')
@@ -49,7 +48,6 @@ class AdamW(Optimizer):
         weight_decay (float): Weight decay. Default: 0.0
         correct_bias (bool): can be set to False to avoid correcting bias in Adam (e.g. like in Bert TF repository). Default True.
     """
-
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.98), eps=1e-6, weight_decay=0.0, correct_bias=True):
         if lr < 0.0:
             raise ValueError("Invalid learning rate: {} - should be >= 0.0".format(lr))
@@ -59,8 +57,9 @@ class AdamW(Optimizer):
             raise ValueError("Invalid beta parameter: {} - should be in [0.0, 1.0[".format(betas[1]))
         if not 0.0 <= eps:
             raise ValueError("Invalid epsilon value: {} - should be >= 0.0".format(eps))
-        defaults = dict(lr=lr, r=r, betas=betas, eps=eps, weight_decay=weight_decay, correct_bias=correct_bias)
+        defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, correct_bias=correct_bias)
         super().__init__(params, defaults)
+
 
     def reset_state(self):
         for group in param_groups:
@@ -71,68 +70,66 @@ class AdamW(Optimizer):
                 state["exp_avg_sq"] = torch.zeros_like(p.data)
 
     def step(self, closure=None):
+        """Performs a single optimization step.
+        Arguments:
+            closure (callable, optional): A closure that reevaluates the model
+                and returns the loss.
+        """
         loss = None
         if closure is not None:
-            with torch.enable_grad():
-                loss = closure()
+            loss = closure()
 
         for group in self.param_groups:
-            lr = group['lr']  # This is alpha
-            r = group['r']
-            weight_decay = group['weight_decay']
-            beta1, beta2 = group['betas']
-            eps = group['eps']
-
-            for p in group['params']:
+            for p in group["params"]:
                 if p.grad is None:
                     continue
-
                 grad = p.grad.data
+                if grad.is_sparse:
+                    raise RuntimeError("Adam does not support sparse gradients, please consider SparseAdam instead")
 
-                if p not in self.state:
-                    self.state[p] = {}
                 state = self.state[p]
 
-                if 'momentum_buffer' not in state:
-                    state['momentum_buffer'] = torch.zeros_like(p.data)
-                if 'velocity_buffer' not in state:
-                    state['velocity_buffer'] = torch.zeros_like(p.data)
-                if 'step' not in state:
-                    state['step'] = 0
+                # State initialization
+                if len(state) == 0:
+                    state["step"] = 0
+                    # Exponential moving average of gradient values
+                    state["exp_avg"] = torch.zeros_like(p.data)
+                    # Exponential moving average of squared gradient values
+                    state["exp_avg_sq"] = torch.zeros_like(p.data)
 
-                momentum_buffer = state['momentum_buffer']
-                velocity_buffer = state['velocity_buffer']
+                exp_avg, exp_avg_sq = state["exp_avg"], state["exp_avg_sq"]
+                beta1, beta2 = group["betas"]
+
+                state["step"] += 1
 
                 norm = torch.norm(grad)
                 x_norm = grad / (norm + 1e-12)
 
-                # EMA calculation (same as MyOptimizer)
-                momentum_buffer.mul_(beta1).add_(x_norm, alpha=1 - beta1)
-                velocity_buffer.mul_(beta2).add_(x_norm * x_norm, alpha=1 - beta2)
 
-                state['step'] += 1
+                # Decay the first and second moment running average coefficient
+                # In-place operations to update the averages at the same time
+                exp_avg.mul_(beta1).add_(x_norm, alpha=1.0 - beta1)
+                exp_avg_sq.mul_(beta2).addcmul_(x_norm, x_norm, value=1.0 - beta2)
+                denom = exp_avg_sq.sqrt().add_(group["eps"])
 
-                # Bias correction (same as MyOptimizer)
-                bias_correction1 = 1 - beta1 ** state['step']
-                bias_correction2 = 1 - beta2 ** state['step']
+                step_size = group["lr"]
+                if 'correct_bias' in group and group["correct_bias"]:  # No bias correction for Bert
+                    bias_correction1 = 1.0 - beta1 ** state["step"]
+                    bias_correction2 = 1.0 - beta2 ** state["step"]
+                    step_size = step_size * math.sqrt(bias_correction2) / bias_correction1
 
-                momentum_buffer_correct = momentum_buffer / bias_correction1
-                velocity_buffer_correct = velocity_buffer / bias_correction2
+                p.data.addcdiv_(-step_size, exp_avg, denom)
 
-                # Add Hessian clipping (key modification)
-                velocity_buffer_correct = torch.clamp(velocity_buffer_correct, min=0.00001)
-
-                # Correct iteration logic (key modification)
-                Phi = r * momentum_buffer_correct  # Initial value
-                max_iterations = min(state['step'], 40)
-
-                for _ in range(max_iterations):
-                    # Use the exact same formula as MyOptimizer
-                    Phi = r * momentum_buffer_correct + (1 - r * velocity_buffer_correct) * Phi.detach()
-
-                # Parameter update (same as MyOptimizer)
-                p.data.mul_(1 - lr * weight_decay)
-                p.data.add_(-lr * Phi)  # Note: here is -Phi
+                # Just adding the square of the weights to the loss function is *not*
+                # the correct way of using L2 regularization/weight decay with Adam,
+                # since that will interact with the m and v parameters in strange ways.
+                #
+                # Instead we want to decay the weights in a manner that doesn't interact
+                # with the m/v parameters. This is equivalent to adding the square
+                # of the weights to the loss with plain (non-momentum) SGD.
+                # Add weight decay at the end (fixed version)
+                if group["weight_decay"] > 0.0:
+                    p.data.add_(p.data, alpha=-group["lr"] * group["weight_decay"])
 
         return loss
 
@@ -148,22 +145,21 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
         gamma(float): Decrease rate of max learning rate by cycle. Default: 1.
         last_epoch (int): The index of last epoch. Default: -1.
     """
-
     def __init__(
-            self,
-            optimizer: torch.optim.Optimizer,
-            max_lr: float = 0.1,
-            min_lr: float = 0.0,
-            warmup_steps: int = 0,
-            max_steps: int = 1,
-            alpha: float = 0.,
-            last_epoch: int = -1
+        self,
+        optimizer : torch.optim.Optimizer,
+        max_lr : float = 0.1,
+        min_lr : float = 0.0,
+        warmup_steps : int = 0,
+        max_steps : int = 1,
+        alpha : float = 0.,
+        last_epoch : int = -1
     ):
-        self.max_lr = max_lr  # max learning rate in the current cycle
-        self.min_lr = min_lr  # min learning rate
-        self.warmup_steps = warmup_steps  # warmup step size
+        self.max_lr = max_lr # max learning rate in the current cycle
+        self.min_lr = min_lr # min learning rate
+        self.warmup_steps = warmup_steps # warmup step size
 
-        self.alpha = alpha  # decrease rate of max learning rate by cycle
+        self.alpha = alpha # decrease rate of max learning rate by cycle
         self.max_steps = max_steps
         super(CosineAnnealingWarmupRestarts, self).__init__(optimizer, last_epoch)
         self.init_lr()
@@ -180,7 +176,7 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
             _step = min(self.last_epoch, self.max_steps)
             cosine_decay = 0.5 * (1 + math.cos(math.pi * _step / self.max_steps))
             decayed = (1 - self.alpha) * cosine_decay + self.alpha
-            return self.max_lr * decayed  # learning_rate * decayed
+            return self.max_lr * decayed # learning_rate * decayed
 
     def step(self, epoch=None):
         if epoch is None:
@@ -194,11 +190,11 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
 
 class CyclicScheduler(_LRScheduler):
     def __init__(
-            self,
-            optimizer,
-            interval_steps=[],
-            interval_lrs=[],
-            last_epoch=-1,
+        self,
+        optimizer,
+        interval_steps = [],
+        interval_lrs = [],
+        last_epoch = -1,
     ):
         self.optimizer = optimizer
 
@@ -216,10 +212,9 @@ class CyclicScheduler(_LRScheduler):
             param_group['lr'] = self.interval_lrs[0]
 
     def get_lr(self):
-        for _i in range(0, len(self.interval_steps) - 1):
+        for _i in range(0, len(self.interval_steps)-1):
             if self.last_epoch >= self.interval_steps[_i] and self.last_epoch < self.interval_steps[_i + 1]:
-                _alpha = (self.last_epoch - self.interval_steps[_i]) / (
-                            self.interval_steps[_i + 1] - self.interval_steps[_i] + 1e-6)
+                _alpha = (self.last_epoch - self.interval_steps[_i]) / (self.interval_steps[_i + 1] - self.interval_steps[_i] + 1e-6)
                 if _alpha < 0:
                     _alpha = 0
                 if _alpha >= 1:
@@ -232,79 +227,76 @@ class CyclicScheduler(_LRScheduler):
         if epoch is None:
             epoch = self.last_epoch + 1
 
-        # self.max_lr = self.base_max_lr * (self.gamma**self.cycle)
+        #self.max_lr = self.base_max_lr * (self.gamma**self.cycle)
         self.last_epoch = math.floor(epoch)
         _lr = self.get_lr()
-        for param_group in self.optimizer.param_groups:  # , self.get_lr()):
+        for param_group in self.optimizer.param_groups: #, self.get_lr()):
             param_group['lr'] = _lr
 
 
+
 def get_linear_schedule_with_warmup(
-        optimizer,
-        num_warmup_steps,
-        num_training_steps,
-        last_epoch=-1
+    optimizer,
+    num_warmup_steps,
+    num_training_steps,
+    last_epoch=-1
 ):
     """ Create a schedule with a learning rate that decreases linearly after
     linearly increasing during a warmup period.
     """
-
     def lr_lambda(current_step):
         if current_step < num_warmup_steps:
             return float(current_step) / float(max(1, num_warmup_steps))
         return max(0.0, float(num_training_steps - current_step) / float(max(1, num_training_steps - num_warmup_steps)))
-
     return LambdaLR(optimizer, lr_lambda, last_epoch)
 
 
 def get_constant_schedule_with_warmup(
-        optimizer,
-        num_warmup_steps,
-        num_training_steps,
-        last_epoch=-1
+    optimizer,
+    num_warmup_steps,
+    num_training_steps,
+    last_epoch=-1
 ):
     """ Create a schedule with a learning rate that decreases linearly after
     linearly increasing during a warmup period.
     """
-
     def lr_lambda(current_step):
         if current_step < num_warmup_steps:
             return float(current_step) / float(max(1, num_warmup_steps))
         return 1.0
-
     return LambdaLR(optimizer, lr_lambda, last_epoch)
 
 
-def create_grouped_parameters(model, no_decay_bias):  # args):
+def create_grouped_parameters(model, no_decay_bias): # args):
     if not no_decay_bias:
         optimizer_grouped_parameters = [
-            {
-                "params": [p for n, p in model.named_parameters()],  # if not any(nd in n for nd in no_decay)],
-            }]
+        {
+            "params": [p for n, p in model.named_parameters()], # if not any(nd in n for nd in no_decay)],
+        }]
     else:
         no_decay = ["bias", "layer_norm.weight"]
 
         optimizer_grouped_parameters = [
-            {
-                "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
-            },
-            {
-                "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
-                "weight_decay": 0.0,
-            }]
+        {
+            "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+        },
+        {
+            "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+            "weight_decay": 0.0,
+        }]
     return optimizer_grouped_parameters
 
 
 def create_adam_optimizer(
-        model,
-        lr,
-        weight_decay,
-        optimizer_grouped_parameters=None,
-        beta1=0.9,
-        beta2=0.98,
-        correct_bias=True,
-        adam_epislon=1e-6,
-        no_decay_bias=False
+    model,
+    lr,
+    weight_decay,
+    optimizer_grouped_parameters=None,
+    beta1=0.9,
+    beta2=0.98,
+    correct_bias=True,
+    adam_epislon=1e-6,
+    no_decay_bias=False
 ):
     if optimizer_grouped_parameters is None:
         optimizer_grouped_parameters = create_grouped_parameters(model, no_decay_bias)
