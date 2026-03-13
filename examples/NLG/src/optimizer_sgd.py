@@ -95,11 +95,8 @@ class AdamW(Optimizer):
                 if weight_decay > 0.0:
                     grad = grad.add(p.data, alpha=weight_decay)
 
-                norm = torch.norm(grad)
-                x_norm = grad / (norm + 1e-12)
-
                 # SGD update
-                p.data.add_(x_norm, alpha=-lr)
+                p.data.add_(grad, alpha=-lr)
 
         return loss
 

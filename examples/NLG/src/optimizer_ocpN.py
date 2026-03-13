@@ -5,7 +5,7 @@
 import logging
 import math
 import os
-from collections import OrderedDict
+from collections import OrderedDict 
 import argparse
 
 import torch
@@ -18,13 +18,14 @@ from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 
 def add_optimizer_params(parser: argparse.ArgumentParser):
     parser.add_argument('--lr', default=0.00001, type=float, help='learning rate')
+    parser.add_argument('--r', default=3, type=float, help='alpha')
     parser.add_argument('--weight_decay', default=0.01, type=float, help='weight decay rate')
     parser.add_argument('--correct_bias', action='store_true', help='correct adam bias term')
     parser.add_argument('--adam_epislon', default=1e-6, type=float, help='adam epsilon')
     parser.add_argument('--no_decay_bias', action='store_true', help='no weight decay on bias weigh')
     parser.add_argument('--adam_beta1', default=0.9, type=float, help='adam beta1 term')
     parser.add_argument('--adam_beta2', default=0.98, type=float, help='adam beta2 term')
-
+    
     parser.add_argument('--scheduler', default='linear', type=str,
                         choices=['cosine', 'inv_sqrt', 'dev_perf', 'constant', 'linear', 'cycle', 'None'],
                         help='lr scheduler to use.')
@@ -57,7 +58,7 @@ class AdamW(Optimizer):
             raise ValueError("Invalid beta parameter: {} - should be in [0.0, 1.0[".format(betas[1]))
         if not 0.0 <= eps:
             raise ValueError("Invalid epsilon value: {} - should be >= 0.0".format(eps))
-        defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, correct_bias=correct_bias)
+        defaults = dict(lr=lr, r=r, betas=betas, eps=eps, weight_decay=weight_decay, correct_bias=correct_bias)
         super().__init__(params, defaults)
 
 
@@ -69,39 +70,78 @@ class AdamW(Optimizer):
                 state["exp_avg"] = torch.zeros_like(p.data)
                 state["exp_avg_sq"] = torch.zeros_like(p.data)
 
+
     def step(self, closure=None):
-        """Performs a single optimization step.
-        Arguments:
-            closure (callable, optional): A closure that reevaluates the model
-                and returns the loss.
-        """
         loss = None
         if closure is not None:
-            loss = closure()
+            with torch.enable_grad():
+                loss = closure()
 
         for group in self.param_groups:
-            lr = group["lr"]
-            weight_decay = group.get("weight_decay", 0.0)
+            lr = group['lr']  # This is alpha
+            r = group['r']
+            weight_decay = group['weight_decay']
+            beta1, beta2 = group['betas']
+            eps = group['eps']
 
-            for p in group["params"]:
+            for p in group['params']:
                 if p.grad is None:
                     continue
 
                 grad = p.grad.data
-                if grad.is_sparse:
-                    raise RuntimeError("SGD does not support sparse gradients in this implementation.")
 
-                # Optional L2 regularization
-                if weight_decay > 0.0:
-                    grad = grad.add(p.data, alpha=weight_decay)
+                if p not in self.state:
+                    self.state[p] = {}
+                state = self.state[p]
 
-                norm = torch.norm(grad)
-                x_norm = grad / (norm + 1e-12)
+                if 'momentum_buffer' not in state:
+                    state['momentum_buffer'] = torch.zeros_like(p.data)
+                if 'velocity_buffer' not in state:
+                    state['velocity_buffer'] = torch.zeros_like(p.data)
+                if 'step' not in state:
+                    state['step'] = 0
 
-                # SGD update
-                p.data.add_(x_norm, alpha=-lr)
+                momentum_buffer = state['momentum_buffer']
+                velocity_buffer = state['velocity_buffer']
+
+
+                # norm = torch.norm(grad)
+                # x_norm = grad / (norm + 1e-12)
+
+                # EMA calculation (same as MyOptimizer)
+                momentum_buffer.mul_(beta1).add_(grad, alpha=1 - beta1)
+                velocity_buffer.mul_(beta2).add_(grad * grad, alpha=1 - beta2)
+
+                state['step'] += 1
+
+
+                # Bias correction (same as MyOptimizer)
+                bias_correction1 = 1 - beta1 ** state['step']
+                bias_correction2 = 1 - beta2 ** state['step']
+
+                momentum_buffer_correct = momentum_buffer / bias_correction1
+                velocity_buffer_correct = velocity_buffer / bias_correction2
+
+                # Add Hessian clipping (key modification)
+                velocity_buffer_correct = torch.clamp(velocity_buffer_correct, min=0.00001)
+
+                # Correct iteration logic (key modification)
+                Phi = r * momentum_buffer_correct  # Initial value
+                max_iterations = min(state['step'], 40)
+
+                for _ in range(max_iterations):
+                    # Use the exact same formula as MyOptimizer
+                    Phi = r * momentum_buffer_correct + (1 - r * velocity_buffer_correct) * Phi.detach()
+
+                # Parameter update (same as MyOptimizer)
+                p.data.mul_(1 - lr * weight_decay)
+                p.data.add_(-lr * Phi)  # Note: here is -Phi
+
 
         return loss
+
+
+
 
 class CosineAnnealingWarmupRestarts(_LRScheduler):
     """
@@ -127,16 +167,16 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
         self.max_lr = max_lr # max learning rate in the current cycle
         self.min_lr = min_lr # min learning rate
         self.warmup_steps = warmup_steps # warmup step size
-
+        
         self.alpha = alpha # decrease rate of max learning rate by cycle
         self.max_steps = max_steps
         super(CosineAnnealingWarmupRestarts, self).__init__(optimizer, last_epoch)
         self.init_lr()
-
+    
     def init_lr(self):
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = self.min_lr
-
+    
     def get_lr(self):
         if self.last_epoch < self.warmup_steps:
             curr_lr = self.max_lr * self.last_epoch / self.warmup_steps
@@ -153,7 +193,7 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
 
         self.last_epoch = math.floor(epoch)
         _lr = self.get_lr()
-        for param_group in self.optimizer.param_groups:
+        for param_group in self.optimizer.param_groups: 
             param_group['lr'] = _lr
 
 
@@ -164,7 +204,7 @@ class CyclicScheduler(_LRScheduler):
         interval_steps = [],
         interval_lrs = [],
         last_epoch = -1,
-    ):
+    ):        
         self.optimizer = optimizer
 
         self.interval_steps = interval_steps
@@ -173,13 +213,13 @@ class CyclicScheduler(_LRScheduler):
         self.last_epoch = last_epoch
 
         super(CyclicScheduler, self).__init__(optimizer, last_epoch)
-
+        
         self.init_lr()
-
+    
     def init_lr(self):
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = self.interval_lrs[0]
-
+    
     def get_lr(self):
         for _i in range(0, len(self.interval_steps)-1):
             if self.last_epoch >= self.interval_steps[_i] and self.last_epoch < self.interval_steps[_i + 1]:
@@ -188,7 +228,7 @@ class CyclicScheduler(_LRScheduler):
                     _alpha = 0
                 if _alpha >= 1:
                     _alpha = 1
-                curr_lr = _alpha * self.interval_lrs[_i + 1] + (1.0 - _alpha) * self.interval_lrs[_i]
+                curr_lr = _alpha * self.interval_lrs[_i + 1] + (1.0 - _alpha) * self.interval_lrs[_i]             
                 return curr_lr
         return self.interval_lrs[-1]
 
@@ -205,9 +245,9 @@ class CyclicScheduler(_LRScheduler):
 
 
 def get_linear_schedule_with_warmup(
-    optimizer,
-    num_warmup_steps,
-    num_training_steps,
+    optimizer, 
+    num_warmup_steps, 
+    num_training_steps, 
     last_epoch=-1
 ):
     """ Create a schedule with a learning rate that decreases linearly after
@@ -221,9 +261,9 @@ def get_linear_schedule_with_warmup(
 
 
 def get_constant_schedule_with_warmup(
-    optimizer,
-    num_warmup_steps,
-    num_training_steps,
+    optimizer, 
+    num_warmup_steps, 
+    num_training_steps, 
     last_epoch=-1
 ):
     """ Create a schedule with a learning rate that decreases linearly after
@@ -250,32 +290,32 @@ def create_grouped_parameters(model, no_decay_bias): # args):
             "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
         },
         {
-            "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+            "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 
             "weight_decay": 0.0,
         }]
     return optimizer_grouped_parameters
 
 
 def create_adam_optimizer(
-    model,
-    lr,
-    weight_decay,
-    optimizer_grouped_parameters=None,
-    beta1=0.9,
-    beta2=0.98,
-    correct_bias=True,
-    adam_epislon=1e-6,
+    model, 
+    lr, 
+    weight_decay, 
+    optimizer_grouped_parameters=None, 
+    beta1=0.9, 
+    beta2=0.98, 
+    correct_bias=True, 
+    adam_epislon=1e-6, 
     no_decay_bias=False
 ):
     if optimizer_grouped_parameters is None:
         optimizer_grouped_parameters = create_grouped_parameters(model, no_decay_bias)
 
     optimizer = AdamW(
-        optimizer_grouped_parameters,
-        lr=lr,
-        betas=(beta1, beta2),
-        eps=adam_epislon,
-        weight_decay=weight_decay,
+        optimizer_grouped_parameters, 
+        lr=lr, 
+        betas=(beta1, beta2), 
+        eps=adam_epislon, 
+        weight_decay=weight_decay, 
         correct_bias=correct_bias
     )
     return optimizer
@@ -284,18 +324,18 @@ def create_adam_optimizer(
 def create_sgd_optimizer(model, lr):
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.0)
     return optimizer
-
+    
 
 def create_adam_optimizer_from_args(model, args, grouped_parameters=None):
     if grouped_parameters is None:
         grouped_parameters = create_grouped_parameters(model, args.no_decay_bias)
 
     optimizer = AdamW(
-        grouped_parameters,
-        lr=args.lr,
-        betas=(args.adam_beta1, args.adam_beta2),
-        eps=args.adam_epislon,
-        weight_decay=args.weight_decay,
+        grouped_parameters, 
+        lr=args.lr, 
+        betas=(args.adam_beta1, args.adam_beta2), 
+        eps=args.adam_epislon, 
+        weight_decay=args.weight_decay, 
         correct_bias=args.correct_bias
     )
     return optimizer
@@ -304,10 +344,10 @@ def create_adam_optimizer_from_args(model, args, grouped_parameters=None):
 def create_optimizer_scheduler(optimizer, args):
     if args.scheduler == 'cosine':
         scheduler = CosineAnnealingWarmupRestarts(
-            optimizer,
-            max_lr=args.lr,
-            min_lr=0.0,
-            warmup_steps=args.warmup_step,
+            optimizer, 
+            max_lr=args.lr, 
+            min_lr=0.0, 
+            warmup_steps=args.warmup_step, 
             max_steps=args.max_step, alpha=0
         )
     elif args.scheduler == 'linear':

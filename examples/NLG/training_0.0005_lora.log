@@ -90,6 +90,8 @@ eval samples: 600 loss: tensor(1.2727, device='cuda:0')
 eval samples: 700 loss: tensor(0.7760, device='cuda:0')
 eval samples: 800 loss: tensor(1.1887, device='cuda:0')
 eval samples: 900 loss: tensor(1.7490, device='cuda:0')
+
+
 eval samples: 1000 loss: tensor(1.1067, device='cuda:0')
 eval samples: 1100 loss: tensor(1.4925, device='cuda:0')
 average loss 1.2598826672422558
