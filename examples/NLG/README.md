@@ -73,7 +73,7 @@ nohup env CUDA_VISIBLE_DEVICES=1 torchrun --nproc_per_node=1 src/gpt2_ft.py \
     --lora_dropout 0.1 \
     --label_smooth 0.1 \
     --work_dir ./trained_models/GPT2_M/e2e \
-    --random_seed 110 > training_0.0005_loraWithNormalization.log 2>&1 &
+    --random_seed 110 > training_0.0005_ocp_.log 2>&1 &
 ```
 
 2. Generate outputs from the trained model using beam search:

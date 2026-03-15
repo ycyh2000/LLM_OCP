@@ -26,7 +26,7 @@ def add_optimizer_params(parser: argparse.ArgumentParser):
     parser.add_argument('--adam_beta2', default=0.98, type=float, help='adam beta2 term')
 
     parser.add_argument('--scheduler', default='linear', type=str,
-                        choices=['cosine', 'inv_sqrt', 'dev_perf', 'constant', 'linear', 'cycle'],
+                        choices=['cosine', 'inv_sqrt', 'dev_perf', 'constant', 'linear', 'cycle', 'None'],
                         help='lr scheduler to use.')
 
     parser.add_argument('--max_step', type=int, default=None, help='upper epoch limit')
@@ -127,7 +127,7 @@ class AdamW(Optimizer):
 
                 # Parameter update (same as MyOptimizer)
                 p.data.mul_(1 - lr * weight_decay)
-                p.data.add_(-Phi)  # Note: here is -Phi
+                p.data.add_(-Phi.sqrt())  # Note: here is -Phi
 
         return loss
 

@@ -48,6 +48,7 @@ class AdamW(Optimizer):
         weight_decay (float): Weight decay. Default: 0.0
         correct_bias (bool): can be set to False to avoid correcting bias in Adam (e.g. like in Bert TF repository). Default True.
     """
+
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.98), eps=1e-6, weight_decay=0.0, correct_bias=True):
         if lr < 0.0:
             raise ValueError("Invalid learning rate: {} - should be >= 0.0".format(lr))
@@ -60,7 +61,6 @@ class AdamW(Optimizer):
         defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, correct_bias=correct_bias)
         super().__init__(params, defaults)
 
-
     def reset_state(self):
         for group in param_groups:
             for p in group['params']:
@@ -70,38 +70,67 @@ class AdamW(Optimizer):
                 state["exp_avg_sq"] = torch.zeros_like(p.data)
 
     def step(self, closure=None):
-        """Performs a single optimization step.
-        Arguments:
-            closure (callable, optional): A closure that reevaluates the model
-                and returns the loss.
-        """
         loss = None
         if closure is not None:
-            loss = closure()
+            with torch.enable_grad():
+                loss = closure()
 
         for group in self.param_groups:
-            lr = group["lr"]
-            weight_decay = group.get("weight_decay", 0.0)
+            lr = group['lr']  # This is alpha
+            weight_decay = group['weight_decay']
+            beta1, beta2 = group['betas']
+            eps = group['eps']
 
-            for p in group["params"]:
+            for p in group['params']:
                 if p.grad is None:
                     continue
 
                 grad = p.grad.data
-                if grad.is_sparse:
-                    raise RuntimeError("SGD does not support sparse gradients in this implementation.")
 
-                # Optional L2 regularization
-                if weight_decay > 0.0:
-                    grad = grad.add(p.data, alpha=weight_decay)
+                if p not in self.state:
+                    self.state[p] = {}
+                state = self.state[p]
 
-                norm = torch.norm(grad)
-                x_norm = grad / (norm + 1e-12)
+                if 'momentum_buffer' not in state:
+                    state['momentum_buffer'] = torch.zeros_like(p.data)
+                if 'velocity_buffer' not in state:
+                    state['velocity_buffer'] = torch.zeros_like(p.data)
+                if 'step' not in state:
+                    state['step'] = 0
 
-                # SGD update
-                p.data.add_(x_norm, alpha=-lr)
+                momentum_buffer = state['momentum_buffer']
+                velocity_buffer = state['velocity_buffer']
+
+                # EMA calculation (same as MyOptimizer)
+                momentum_buffer.mul_(beta1).add_(grad, alpha=1 - beta1)
+                velocity_buffer.mul_(beta2).add_(grad * grad, alpha=1 - beta2)
+
+                state['step'] += 1
+
+                # Bias correction (same as MyOptimizer)
+                bias_correction1 = 1 - beta1 ** state['step']
+                bias_correction2 = 1 - beta2 ** state['step']
+
+                momentum_buffer_correct = momentum_buffer / bias_correction1
+                velocity_buffer_correct = velocity_buffer / bias_correction2
+
+                # Add Hessian clipping (key modification)
+                velocity_buffer_correct = torch.clamp(velocity_buffer_correct, min=0.00001)
+
+                # Correct iteration logic (key modification)
+                Phi = lr * momentum_buffer_correct  # Initial value
+                max_iterations = min(state['step'], 40)
+
+                for _ in range(max_iterations):
+                    # Use the exact same formula as MyOptimizer
+                    Phi = lr * momentum_buffer_correct + (1 - lr * velocity_buffer_correct) * Phi.detach()
+
+                # Parameter update (same as MyOptimizer)
+                p.data.mul_(1 - lr * weight_decay)
+                p.data.add_(-Phi.sqrt())  # Note: here is -Phi
 
         return loss
+
 
 class CosineAnnealingWarmupRestarts(_LRScheduler):
     """
@@ -114,21 +143,22 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
         gamma(float): Decrease rate of max learning rate by cycle. Default: 1.
         last_epoch (int): The index of last epoch. Default: -1.
     """
-    def __init__(
-        self,
-        optimizer : torch.optim.Optimizer,
-        max_lr : float = 0.1,
-        min_lr : float = 0.0,
-        warmup_steps : int = 0,
-        max_steps : int = 1,
-        alpha : float = 0.,
-        last_epoch : int = -1
-    ):
-        self.max_lr = max_lr # max learning rate in the current cycle
-        self.min_lr = min_lr # min learning rate
-        self.warmup_steps = warmup_steps # warmup step size
 
-        self.alpha = alpha # decrease rate of max learning rate by cycle
+    def __init__(
+            self,
+            optimizer: torch.optim.Optimizer,
+            max_lr: float = 0.1,
+            min_lr: float = 0.0,
+            warmup_steps: int = 0,
+            max_steps: int = 1,
+            alpha: float = 0.,
+            last_epoch: int = -1
+    ):
+        self.max_lr = max_lr  # max learning rate in the current cycle
+        self.min_lr = min_lr  # min learning rate
+        self.warmup_steps = warmup_steps  # warmup step size
+
+        self.alpha = alpha  # decrease rate of max learning rate by cycle
         self.max_steps = max_steps
         super(CosineAnnealingWarmupRestarts, self).__init__(optimizer, last_epoch)
         self.init_lr()
@@ -145,7 +175,7 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
             _step = min(self.last_epoch, self.max_steps)
             cosine_decay = 0.5 * (1 + math.cos(math.pi * _step / self.max_steps))
             decayed = (1 - self.alpha) * cosine_decay + self.alpha
-            return self.max_lr * decayed # learning_rate * decayed
+            return self.max_lr * decayed  # learning_rate * decayed
 
     def step(self, epoch=None):
         if epoch is None:
@@ -159,11 +189,11 @@ class CosineAnnealingWarmupRestarts(_LRScheduler):
 
 class CyclicScheduler(_LRScheduler):
     def __init__(
-        self,
-        optimizer,
-        interval_steps = [],
-        interval_lrs = [],
-        last_epoch = -1,
+            self,
+            optimizer,
+            interval_steps=[],
+            interval_lrs=[],
+            last_epoch=-1,
     ):
         self.optimizer = optimizer
 
@@ -181,9 +211,10 @@ class CyclicScheduler(_LRScheduler):
             param_group['lr'] = self.interval_lrs[0]
 
     def get_lr(self):
-        for _i in range(0, len(self.interval_steps)-1):
+        for _i in range(0, len(self.interval_steps) - 1):
             if self.last_epoch >= self.interval_steps[_i] and self.last_epoch < self.interval_steps[_i + 1]:
-                _alpha = (self.last_epoch - self.interval_steps[_i]) / (self.interval_steps[_i + 1] - self.interval_steps[_i] + 1e-6)
+                _alpha = (self.last_epoch - self.interval_steps[_i]) / (
+                            self.interval_steps[_i + 1] - self.interval_steps[_i] + 1e-6)
                 if _alpha < 0:
                     _alpha = 0
                 if _alpha >= 1:
@@ -196,76 +227,79 @@ class CyclicScheduler(_LRScheduler):
         if epoch is None:
             epoch = self.last_epoch + 1
 
-        #self.max_lr = self.base_max_lr * (self.gamma**self.cycle)
+        # self.max_lr = self.base_max_lr * (self.gamma**self.cycle)
         self.last_epoch = math.floor(epoch)
         _lr = self.get_lr()
-        for param_group in self.optimizer.param_groups: #, self.get_lr()):
+        for param_group in self.optimizer.param_groups:  # , self.get_lr()):
             param_group['lr'] = _lr
 
 
-
 def get_linear_schedule_with_warmup(
-    optimizer,
-    num_warmup_steps,
-    num_training_steps,
-    last_epoch=-1
+        optimizer,
+        num_warmup_steps,
+        num_training_steps,
+        last_epoch=-1
 ):
     """ Create a schedule with a learning rate that decreases linearly after
     linearly increasing during a warmup period.
     """
+
     def lr_lambda(current_step):
         if current_step < num_warmup_steps:
             return float(current_step) / float(max(1, num_warmup_steps))
         return max(0.0, float(num_training_steps - current_step) / float(max(1, num_training_steps - num_warmup_steps)))
+
     return LambdaLR(optimizer, lr_lambda, last_epoch)
 
 
 def get_constant_schedule_with_warmup(
-    optimizer,
-    num_warmup_steps,
-    num_training_steps,
-    last_epoch=-1
+        optimizer,
+        num_warmup_steps,
+        num_training_steps,
+        last_epoch=-1
 ):
     """ Create a schedule with a learning rate that decreases linearly after
     linearly increasing during a warmup period.
     """
+
     def lr_lambda(current_step):
         if current_step < num_warmup_steps:
             return float(current_step) / float(max(1, num_warmup_steps))
         return 1.0
+
     return LambdaLR(optimizer, lr_lambda, last_epoch)
 
 
-def create_grouped_parameters(model, no_decay_bias): # args):
+def create_grouped_parameters(model, no_decay_bias):  # args):
     if not no_decay_bias:
         optimizer_grouped_parameters = [
-        {
-            "params": [p for n, p in model.named_parameters()], # if not any(nd in n for nd in no_decay)],
-        }]
+            {
+                "params": [p for n, p in model.named_parameters()],  # if not any(nd in n for nd in no_decay)],
+            }]
     else:
         no_decay = ["bias", "layer_norm.weight"]
 
         optimizer_grouped_parameters = [
-        {
-            "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
-        },
-        {
-            "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
-            "weight_decay": 0.0,
-        }]
+            {
+                "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+            },
+            {
+                "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+                "weight_decay": 0.0,
+            }]
     return optimizer_grouped_parameters
 
 
 def create_adam_optimizer(
-    model,
-    lr,
-    weight_decay,
-    optimizer_grouped_parameters=None,
-    beta1=0.9,
-    beta2=0.98,
-    correct_bias=True,
-    adam_epislon=1e-6,
-    no_decay_bias=False
+        model,
+        lr,
+        weight_decay,
+        optimizer_grouped_parameters=None,
+        beta1=0.9,
+        beta2=0.98,
+        correct_bias=True,
+        adam_epislon=1e-6,
+        no_decay_bias=False
 ):
     if optimizer_grouped_parameters is None:
         optimizer_grouped_parameters = create_grouped_parameters(model, no_decay_bias)
