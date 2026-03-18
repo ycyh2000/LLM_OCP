@@ -49,3 +49,96 @@ Experiment dir : ./trained_models/GPT2_M/e2e
 loading model pretrained weight.
 set max_step: 26290
 start to train the model................ 1
+| epoch   1 step      100 |    100 batches | lr 0.0005 | ms/batch 853.41 | loss  6.58 | avg loss  5.75 | ppl 315.07
+| epoch   1 step      200 |    200 batches | lr 0.0005 | ms/batch 861.41 | loss 15.10 | avg loss 12.96 | ppl 424186.44
+| epoch   1 step      300 |    300 batches | lr 0.0005 | ms/batch 860.41 | loss 14.65 | avg loss 14.57 | ppl 2125609.49
+| epoch   1 step      400 |    400 batches | lr 0.0005 | ms/batch 861.31 | loss 14.45 | avg loss 14.41 | ppl 1816210.76
+| epoch   1 step      500 |    500 batches | lr 0.0005 | ms/batch 862.54 | loss 14.14 | avg loss 14.16 | ppl 1415769.31
+| epoch   1 step      600 |    600 batches | lr 0.0005 | ms/batch 863.93 | loss 14.16 | avg loss 14.21 | ppl 1480921.75
+| epoch   1 step      700 |    700 batches | lr 0.0005 | ms/batch 865.12 | loss 14.19 | avg loss 14.40 | ppl 1788679.94
+| epoch   1 step      800 |    800 batches | lr 0.0005 | ms/batch 862.55 | loss 14.79 | avg loss 14.51 | ppl 2007404.20
+| epoch   1 step      900 |    900 batches | lr 0.0005 | ms/batch 861.26 | loss 14.25 | avg loss 14.53 | ppl 2049798.41
+| epoch   1 step     1000 |   1000 batches | lr 0.0005 | ms/batch 866.46 | loss 14.62 | avg loss 14.58 | ppl 2145362.30
+saving checkpoint ./trained_models/GPT2_M/e2e/model.1000.pt
+/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py:4631: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+| epoch   1 step     1100 |   1100 batches | lr 0.0005 | ms/batch 858.78 | loss 14.51 | avg loss 14.46 | ppl 1911902.65
+| epoch   1 step     1200 |   1200 batches | lr 0.0005 | ms/batch 862.17 | loss 14.44 | avg loss 14.60 | ppl 2181167.30
+| epoch   1 step     1300 |   1300 batches | lr 0.0005 | ms/batch 863.46 | loss 14.36 | avg loss 14.51 | ppl 2011569.77
+| epoch   1 step     1400 |   1400 batches | lr 0.0005 | ms/batch 864.26 | loss 14.75 | avg loss 14.49 | ppl 1961617.91
+| epoch   1 step     1500 |   1500 batches | lr 0.0005 | ms/batch 863.65 | loss 14.78 | avg loss 14.65 | ppl 2309992.01
+| epoch   1 step     1600 |   1600 batches | lr 0.0005 | ms/batch 876.42 | loss 15.41 | avg loss 14.67 | ppl 2340175.50
+| epoch   1 step     1700 |   1700 batches | lr 0.0005 | ms/batch 889.06 | loss 14.38 | avg loss 14.70 | ppl 2433830.01
+| epoch   1 step     1800 |   1800 batches | lr 0.0005 | ms/batch 888.26 | loss 15.64 | avg loss 14.69 | ppl 2403463.89
+| epoch   1 step     1900 |   1900 batches | lr 0.0005 | ms/batch 887.88 | loss 15.24 | avg loss 14.74 | ppl 2519218.70
+| epoch   1 step     2000 |   2000 batches | lr 0.0005 | ms/batch 888.00 | loss 14.84 | avg loss 14.81 | ppl 2700891.87
+saving checkpoint ./trained_models/GPT2_M/e2e/model.2000.pt
+/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/nn/_reduction.py:51: UserWarning: size_average and reduce args will be deprecated, please use reduction='none' instead.
+  warnings.warn(warning.format(ret))
+eval samples: 0 loss: tensor(14.5067, device='cuda:0')
+eval samples: 100 loss: tensor(14.0697, device='cuda:0')
+eval samples: 200 loss: tensor(14.4571, device='cuda:0')
+eval samples: 300 loss: tensor(14.4875, device='cuda:0')
+eval samples: 400 loss: tensor(14.0460, device='cuda:0')
+eval samples: 500 loss: tensor(14.1430, device='cuda:0')
+eval samples: 600 loss: tensor(14.4386, device='cuda:0')
+eval samples: 700 loss: tensor(13.7504, device='cuda:0')
+eval samples: 800 loss: tensor(14.2638, device='cuda:0')
+eval samples: 900 loss: tensor(14.8244, device='cuda:0')
+eval samples: 1000 loss: tensor(14.7674, device='cuda:0')
+eval samples: 1100 loss: tensor(13.9483, device='cuda:0')
+average loss 14.292981094693484
+----------------------------------------------------------------------------------------------------
+| Eval   1 at step     2000 | time: 200.90s | valid loss 14.29 | valid ppl 1611991.77 | best ppl 1611991.77 
+----------------------------------------------------------------------------------------------------
+| epoch   1 step     2100 |   2100 batches | lr 0.0005 | ms/batch 2878.52 | loss 15.23 | avg loss 14.93 | ppl 3034083.53
+| epoch   1 step     2200 |   2200 batches | lr 0.0005 | ms/batch 861.15 | loss 14.44 | avg loss 14.97 | ppl 3166132.15
+| epoch   1 step     2300 |   2300 batches | lr 0.0005 | ms/batch 865.64 | loss 15.50 | avg loss 15.00 | ppl 3283896.95
+| epoch   1 step     2400 |   2400 batches | lr 0.0005 | ms/batch 863.80 | loss 15.14 | avg loss 15.17 | ppl 3872029.41
+| epoch   1 step     2500 |   2500 batches | lr 0.0005 | ms/batch 864.28 | loss 14.71 | avg loss 15.10 | ppl 3609834.06
+| epoch   1 step     2600 |   2600 batches | lr 0.0005 | ms/batch 863.72 | loss 14.01 | avg loss 15.21 | ppl 4040188.01
+| epoch   1 step     2700 |   2700 batches | lr 0.0005 | ms/batch 866.83 | loss 14.58 | avg loss 15.14 | ppl 3769504.29
+| epoch   1 step     2800 |   2800 batches | lr 0.0005 | ms/batch 865.81 | loss 15.55 | avg loss 15.32 | ppl 4520404.99
+| epoch   1 step     2900 |   2900 batches | lr 0.0005 | ms/batch 866.11 | loss 15.61 | avg loss 15.30 | ppl 4414021.24
+| epoch   1 step     3000 |   3000 batches | lr 0.0005 | ms/batch 865.23 | loss 15.33 | avg loss 15.30 | ppl 4413187.29
+saving checkpoint ./trained_models/GPT2_M/e2e/model.3000.pt
+| epoch   1 step     3100 |   3100 batches | lr 0.0005 | ms/batch 953.15 | loss 15.10 | avg loss 15.37 | ppl 4753346.78
+| epoch   1 step     3200 |   3200 batches | lr 0.0005 | ms/batch 873.64 | loss 15.71 | avg loss 15.35 | ppl 4629187.27
+| epoch   1 step     3300 |   3300 batches | lr 0.0005 | ms/batch 872.60 | loss 14.95 | avg loss 15.49 | ppl 5341090.27
+| epoch   1 step     3400 |   3400 batches | lr 0.0005 | ms/batch 873.29 | loss 15.12 | avg loss 15.55 | ppl 5689644.01
+| epoch   1 step     3500 |   3500 batches | lr 0.0005 | ms/batch 882.80 | loss 15.19 | avg loss 15.50 | ppl 5377925.40
+| epoch   1 step     3600 |   3600 batches | lr 0.0005 | ms/batch 869.55 | loss   nan | avg loss   nan | ppl   nan
+| epoch   1 step     3700 |   3700 batches | lr 0.0005 | ms/batch 882.80 | loss   nan | avg loss   nan | ppl   nan
+E0315 12:49:45.562000 3541849 site-packages/torch/distributed/elastic/multiprocessing/api.py:874] failed (exitcode: -9) local_rank: 0 (pid: 3541928) of binary: /home/ycyh/miniconda3/envs/LoRA/bin/python3.11
+Traceback (most recent call last):
+  File "/home/ycyh/miniconda3/envs/LoRA/bin/torchrun", line 7, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/run.py", line 892, in main
+    run(args)
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/run.py", line 883, in run
+    elastic_launch(
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 139, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 270, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+========================================================
+src/gpt2_ft.py FAILED
+--------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+--------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-03-15_12:49:45
+  host      : h3c
+  rank      : 0 (local_rank: 0)
+  exitcode  : -9 (pid: 3541928)
+  error_file: <N/A>
+  traceback : Signal 9 (SIGKILL) received by PID 3541928
+========================================================
