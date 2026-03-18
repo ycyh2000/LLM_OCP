@@ -49,3 +49,4 @@ Experiment dir : ./trained_models/GPT2_M/e2e
 loading model pretrained weight.
 set max_step: 26290
 start to train the model................ 1
+| epoch   1 step      100 |    100 batches | lr 0.0005 | ms/batch 856.93 | loss  3.80 | avg loss  4.43 | ppl 84.27
