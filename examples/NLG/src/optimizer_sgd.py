@@ -91,6 +91,7 @@ class AdamW(Optimizer):
                 if grad.is_sparse:
                     raise RuntimeError("SGD does not support sparse gradients in this implementation.")
 
+
                 # Optional L2 regularization
                 if weight_decay > 0.0:
                     grad = grad.add(p.data, alpha=weight_decay)
