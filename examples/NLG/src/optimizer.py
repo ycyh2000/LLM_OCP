@@ -91,15 +91,12 @@ class AdamW(Optimizer):
                 if grad.is_sparse:
                     raise RuntimeError("SGD does not support sparse gradients in this implementation.")
 
-                norm = torch.norm(grad)
-
-                direction = grad / (norm + 1e-12)
-                step_size = norm
-                x_norm = step_size * direction
-
                 # Optional L2 regularization
                 if weight_decay > 0.0:
                     grad = grad.add(p.data, alpha=weight_decay)
+
+                norm = torch.norm(grad)
+                x_norm = grad / (norm + 1e-12)
 
                 # SGD update
                 p.data.add_(x_norm, alpha=-lr)
