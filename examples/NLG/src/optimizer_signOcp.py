@@ -5,7 +5,7 @@
 import logging
 import math
 import os
-from collections import OrderedDict 
+from collections import OrderedDict
 import argparse
 
 import torch
@@ -26,7 +26,7 @@ def add_optimizer_params(parser: argparse.ArgumentParser):
     parser.add_argument('--adam_beta2', default=0.98, type=float, help='adam beta2 term')
     
     parser.add_argument('--scheduler', default='linear', type=str,
-                        choices=['cosine', 'inv_sqrt', 'dev_perf', 'constant', 'linear', 'cycle', 'None'],
+                        choices=['cosine', 'inv_sqrt', 'dev_perf', 'constant', 'linear', 'cycle'],
                         help='lr scheduler to use.')
 
     parser.add_argument('--max_step', type=int, default=None, help='upper epoch limit')
@@ -102,26 +102,11 @@ class AdamW(Optimizer):
                 momentum_buffer = state['momentum_buffer']
                 velocity_buffer = state['velocity_buffer']
 
-                norm = torch.norm(grad)
-
-                direction = grad / (norm + 1e-12)
-                step_size = norm
-                x_norm = step_size * direction
-
                 # EMA calculation (same as MyOptimizer)
-                momentum_buffer.mul_(beta1).add_(x_norm, alpha=1 - beta1)
-                velocity_buffer.mul_(beta2).add_(x_norm * x_norm, alpha=1 - beta2)
-
-
-                # EMA calculation (same as MyOptimizer)
-                momentum_buffer.mul_(beta1).add_(x_norm, alpha=1 - beta1)
-                velocity_buffer.mul_(beta2).add_(x_norm * x_norm, alpha=1 - beta2)
-
-
-
+                momentum_buffer.mul_(beta1).add_(grad, alpha=1 - beta1)
+                velocity_buffer.mul_(beta2).add_(grad * grad, alpha=1 - beta2)
 
                 state['step'] += 1
-
 
                 # Bias correction (same as MyOptimizer)
                 bias_correction1 = 1 - beta1 ** state['step']
@@ -134,12 +119,12 @@ class AdamW(Optimizer):
                 velocity_buffer_correct = torch.clamp(velocity_buffer_correct, min=0.00001)
 
                 # Correct iteration logic (key modification)
-                Phi = lr * momentum_buffer_correct  # Initial value
-                max_iterations = min(state['step'], 40)
+                Phi = lr * torch.sign(momentum_buffer_correct)  # Initial value
+                max_iterations = min(state['step'], 2)
 
                 for _ in range(max_iterations):
                     # Use the exact same formula as MyOptimizer
-                    Phi = lr * momentum_buffer_correct + (1 - lr * velocity_buffer_correct) * Phi.detach()
+                    Phi = lr * torch.sign(momentum_buffer_correct) + (1 - lr * velocity_buffer_correct) * Phi.detach()
 
                 # Parameter update (same as MyOptimizer)
                 p.data.mul_(1 - lr * weight_decay)

@@ -128,8 +128,8 @@ class AdamW(Optimizer):
 
                 # Parameter update (same as MyOptimizer)
                 # p.data.mul_(1 - lr * weight_decay)
-                # norm = torch.norm(Phi)
-                # x_norm = grad / (norm + 1e-12)
+                norm = torch.norm(Phi)
+                x_norm = grad / (norm + 1e-12)
                 p.data.add_(-lr * x_norm)  # Note: here is -Phi
 
         return loss
