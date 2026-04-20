@@ -98,3 +98,4 @@ average loss 1.2580968669220194
 ----------------------------------------------------------------------------------------------------
 | epoch   1 step     2100 |   2100 batches | lr 0.0001 | ms/batch 3310.70 | loss  2.67 | avg loss  2.62 | ppl 13.80
 | epoch   1 step     2200 |   2200 batches | lr 0.0001 | ms/batch 1720.46 | loss  2.88 | avg loss  2.62 | ppl 13.73
+| epoch   1 step     2300 |   2300 batches | lr 0.0001 | ms/batch 1717.45 | loss  2.62 | avg loss  2.61 | ppl 13.61
