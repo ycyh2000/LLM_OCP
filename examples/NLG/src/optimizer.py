@@ -140,13 +140,12 @@ class AdamW(Optimizer):
                     velocity_buffer_correct = torch.clamp(velocity_buffer_correct, min=0.00001)
 
                     # Correct iteration logic (key modification)
-                    Phi = lr * torch.sign(momentum_buffer_correct)  # Initial value
-                    max_iterations = min(state['step'], 2)
+                    Phi = lr * momentum_buffer_correct  # Initial value
+                    max_iterations = min(state['step'], 40)
 
                     for _ in range(max_iterations):
                         # Use the exact same formula as MyOptimizer
-                        Phi = lr * torch.sign(momentum_buffer_correct) + (
-                                    1 - lr * velocity_buffer_correct) * Phi.detach()
+                        Phi = lr * momentum_buffer_correct + (1 - lr * velocity_buffer_correct) * Phi.detach()
 
                     # Parameter update (same as MyOptimizer)
                     p.data.mul_(1 - lr * weight_decay)

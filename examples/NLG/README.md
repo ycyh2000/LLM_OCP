@@ -49,7 +49,9 @@ There are several directories in this repo:
 
 1. Train GPT-2 Medium with LoRA (see our paper for hyperparameters for GPT-2 Medium)
 ```
-nohup env CUDA_VISIBLE_DEVICES=2 torchrun --nproc_per_node=1  --rdzv_endpoint=localhost:29503  src/gpt2_ft.py \
+nohup env CUDA_VISIBLE_DEVICES=1 torchrun \
+    --nproc_per_node=1  \
+    --rdzv_endpoint=localhost:29501 src/gpt2_ft.py \
     --train_data ./data/e2e/train.jsonl \
     --valid_data ./data/e2e/valid.jsonl \
     --train_batch_size 8 \
@@ -60,7 +62,7 @@ nohup env CUDA_VISIBLE_DEVICES=2 torchrun --nproc_per_node=1  --rdzv_endpoint=lo
     --init_checkpoint ./pretrained_checkpoints/gpt2-medium-pytorch_model.bin \
     --platform local \
     --clip 0.0 \
-    --lr 0.0001 \
+    --lr 0.005 \
     --weight_decay 0.01 \
     --correct_bias \
     --adam_beta2 0.999 \
@@ -73,7 +75,7 @@ nohup env CUDA_VISIBLE_DEVICES=2 torchrun --nproc_per_node=1  --rdzv_endpoint=lo
     --lora_dropout 0.1 \
     --label_smooth 0.1 \
     --work_dir ./trained_models/GPT2_M/e2e \
-    --random_seed 110 > training_0.0001_adamAndOcpWithNormalization.log 2>&1 &
+    --random_seed 110 > training_0.005_adamAndOcpWithNorm.log 2>&1 &
 ```
 
 
