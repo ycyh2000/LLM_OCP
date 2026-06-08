@@ -25,7 +25,42 @@ metrics = [
 ]
 
 
-allowed_sheets = {'0.0001adamAndSignOcp', '0.0001adamAndSignOcpWithNorm'}
+allowed_sheets = {
+    #   "0.0001adam"
+    # , "0.0001adamWithNorm"
+    # , "0.0001signOcp"
+    # , "0.0001signOcpWithNorm"
+    # , "0.0001adamAndOcp"
+    # , "0.0001adamAndOcpWithNorm"
+    # , "0.0001adamAndSignOcp"
+    # , "0.0001adamAndSignOcpWithNorm"
+    # , "0.0001ocp"
+    # , "0.0001ocpWithNorm"
+
+
+      # "0.0005adam"
+    # , "0.0005adamWithNorm"
+    # , "0.0005signOcp"
+    # , "0.0005signOcpWithNorm"
+    # , "0.0005adamAndOcp"
+    # , "0.0005adamAndOcpWithNorm"
+    # , "0.0005adamAndSignOcp"
+    # , "0.0005adamAndSignOcpWithNorm"
+    # , "0.0005ocp"
+    # , "0.0005ocpWithNorm"
+
+
+    #   "0.005adam"
+    # , "0.005adamWithNorm"
+    # , "0.005ocp"
+    # , "0.005ocpWithNorm"
+
+     "0.0002adam"
+    , "0.0002adamAndSIgnOcp"
+    , "0.0003adam"
+    , "0.0003adamAndSignOcp"
+    , "0.0004adam"
+}
 
 
 
@@ -34,7 +69,7 @@ allowed_sheets = {'0.0001adamAndSignOcp', '0.0001adamAndSignOcpWithNorm'}
 for sheet_name, df in all_sheets.items():
     if sheet_name not in allowed_sheets:
         continue
-    print(sheet_name)
+    print(",",'"',sheet_name,'"')
     # X-axis: row numbers (starting from 0), offset by start_epoch
     epochs = range(start_epoch, start_epoch + len(df))
 

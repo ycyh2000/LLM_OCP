@@ -1,0 +1,89 @@
+nohup: ignoring input
+myrank: 0 local_rank: 0 device_count: 1 world_size: 1
+====================================================================================================
+        - platform : local
+        - local_rank : 0
+        - rank : 0
+        - device : cuda:0
+        - world_size : 1
+        - random_seed : 110
+        - lr : 0.0001
+        - weight_decay : 0.01
+        - correct_bias : True
+        - adam_epislon : 1e-06
+        - no_decay_bias : False
+        - adam_beta1 : 0.9
+        - adam_beta2 : 0.999
+        - scheduler : None
+        - max_step : None
+        - max_epoch : 5
+        - warmup_step : 500
+        - i_steps : 0
+        - i_lrs : 0.00025
+        - train_data : ./data/e2e/train.jsonl
+        - valid_data : ./data/e2e/valid.jsonl
+        - train_batch_size : 8
+        - valid_batch_size : 4
+        - grad_acc : 1
+        - clip : 0.0
+        - seq_len : 512
+        - model_card : gpt2.md
+        - init_checkpoint : ./pretrained_checkpoints/gpt2-medium-pytorch_model.bin
+        - fp16 : False
+        - log_interval : 100
+        - eval_interval : 2000
+        - save_interval : 1000
+        - work_dir : ./trained_models/GPT2_M/e2e
+        - lora_dim : 4
+        - lora_alpha : 32
+        - obj : clm
+        - lora_dropout : 0.1
+        - label_smooth : 0.1
+        - roll_interval : -1
+        - roll_lr : 1e-05
+        - roll_step : 100
+        - eval_epoch : 1
+        - dist : <module 'torch.distributed' from '/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/__init__.py'>
+====================================================================================================
+Experiment dir : ./trained_models/GPT2_M/e2e
+loading model pretrained weight.
+set max_step: 26290
+start to train the model................ 1
+| epoch   1 step      100 |    100 batches | lr 0.0001 | ms/batch 1634.43 | loss  6.12 | avg loss  5.75 | ppl 315.02
+| epoch   1 step      200 |    200 batches | lr 0.0001 | ms/batch 1616.33 | loss  6.00 | avg loss  5.79 | ppl 327.46
+| epoch   1 step      300 |    300 batches | lr 0.0001 | ms/batch 1619.82 | loss  5.82 | avg loss  5.77 | ppl 319.41
+| epoch   1 step      400 |    400 batches | lr 0.0001 | ms/batch 1617.59 | loss  6.31 | avg loss  5.75 | ppl 313.00
+| epoch   1 step      500 |    500 batches | lr 0.0001 | ms/batch 1618.80 | loss  5.92 | avg loss  5.76 | ppl 317.21
+| epoch   1 step      600 |    600 batches | lr 0.0001 | ms/batch 1608.68 | loss  5.62 | avg loss  5.66 | ppl 286.65
+| epoch   1 step      700 |    700 batches | lr 0.0001 | ms/batch 1613.86 | loss  5.47 | avg loss  5.62 | ppl 275.00
+| epoch   1 step      800 |    800 batches | lr 0.0001 | ms/batch 1621.85 | loss  5.04 | avg loss  5.54 | ppl 255.20
+W0508 18:05:07.095000 3917452 site-packages/torch/distributed/elastic/agent/server/api.py:719] Received 1 death signal, shutting down workers
+W0508 18:05:07.100000 3917452 site-packages/torch/distributed/elastic/multiprocessing/api.py:900] Sending process 3917532 closing signal SIGHUP
+Traceback (most recent call last):
+  File "/home/ycyh/miniconda3/envs/LoRA/bin/torchrun", line 7, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/run.py", line 892, in main
+    run(args)
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/run.py", line 883, in run
+    elastic_launch(
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 139, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 261, in launch_agent
+    result = agent.run()
+             ^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/elastic/metrics/api.py", line 138, in wrapper
+    result = f(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/elastic/agent/server/api.py", line 711, in run
+    result = self._invoke_run(role)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/elastic/agent/server/api.py", line 870, in _invoke_run
+    time.sleep(monitor_interval)
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 84, in _terminate_process_handler
+    raise SignalException(f"Process {os.getpid()} got signal: {sigval}", sigval=sigval)
+torch.distributed.elastic.multiprocessing.api.SignalException: Process 3917452 got signal: 1

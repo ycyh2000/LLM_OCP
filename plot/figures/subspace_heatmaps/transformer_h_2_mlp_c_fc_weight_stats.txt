@@ -1,0 +1,7 @@
+Layer: transformer_h_2_mlp_c_fc_weight
+Num steps : 309
+Min       : 0.094183
+Max       : 1.000001
+Mean      : 0.682292
+Median    : 0.698472
+Std       : 0.103999

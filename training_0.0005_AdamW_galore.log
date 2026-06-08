@@ -1,0 +1,35 @@
+nohup: ignoring input
+/home/ycyh/miniconda3/envs/LoRA/bin/python3.11: can't open file '/home/ycyh/code/LLM/LoRA-main/LoRA-main/src/gpt2_ft.py': [Errno 2] No such file or directory
+E0529 10:13:29.613000 1355945 site-packages/torch/distributed/elastic/multiprocessing/api.py:874] failed (exitcode: 2) local_rank: 0 (pid: 1356022) of binary: /home/ycyh/miniconda3/envs/LoRA/bin/python3.11
+Traceback (most recent call last):
+  File "/home/ycyh/miniconda3/envs/LoRA/bin/torchrun", line 7, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/run.py", line 892, in main
+    run(args)
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/run.py", line 883, in run
+    elastic_launch(
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 139, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 270, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+src/gpt2_ft.py FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-05-29_10:13:29
+  host      : h3c
+  rank      : 0 (local_rank: 0)
+  exitcode  : 2 (pid: 1356022)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
