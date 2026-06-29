@@ -48,7 +48,7 @@ def add_optimizer_params(parser: argparse.ArgumentParser):
     parser.add_argument("--proj_type", type=str, default="std")
 
 
-class ocpGNCorrect_galore(Optimizer):
+class ocpGNFalse_galore(Optimizer):
     """ Implements Adam algorithm with weight decay fix.
     Parameters:
         lr (float): learning rate. Default 1e-3.
@@ -123,10 +123,10 @@ class ocpGNCorrect_galore(Optimizer):
                                                                        proj_type=group["proj_type"])
                     # grad = state["projector"].project(grad, state["step"])
 
-                    # start = time.perf_counter()
+                    start = time.perf_counter()
                     if grad.dim() >= 2:
                         grad = state["projector"].project(grad, state["step"])
-                    # end = time.perf_counter()
+                    end = time.perf_counter()
                     # print(f"grad projector time: {(end - start) * 1000:.2f} ms")
 
                 # State initialization
@@ -142,33 +142,30 @@ class ocpGNCorrect_galore(Optimizer):
                 state["step"] += 1
 
                 # Decay the first and second moment running average coefficient
-                # In-place operations to update the averages at the same time
-                exp_avg.mul_(beta1).add_(grad, alpha=(1.0 - beta1))
-                exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1.0 - beta2)
+                exp_avg.mul_(beta1).add_(grad, alpha=1 - beta1)
+                exp_avg_sq.mul_(beta2).add_(grad * grad, alpha=1 - beta2)
 
+                # Bias correction (same as MyOptimizer)
+                bias_correction1 = 1 - beta1 ** state["step"]
+                bias_correction2 = 1 - beta2 ** state["step"]
 
-                bias_correction1 = 1.0 - beta1 ** state["step"]
-                bias_correction2 = 1.0 - beta2 ** state["step"]
                 exp_avg = exp_avg / bias_correction1
                 exp_avg_sq = exp_avg_sq / bias_correction2
 
-                max_iterations = min(state['step'], 1)
+                # Add Hessian clipping (key modification)
+                # velocity_buffer_correct = torch.clamp(velocity_buffer_correct, min=1e-8)
+
+                # Correct iteration logic (key modification)
+                max_iterations = min(state["step"], 1)
 
                 Phi = exp_avg * (
-                            1 - (1 - torch.clamp(lr * exp_avg_sq, min=0.2, max=0.8)) ** max_iterations) / (
-                                  lr * exp_avg_sq + 1e-8)
+                        1 - (1 - torch.clamp(lr * exp_avg_sq, min=0.2, max=0.8)) ** max_iterations) / (
+                              lr * exp_avg_sq + 1e-8)
                 Phi = torch.clamp(Phi, min=-1, max=1)
                 Phi = lr * Phi
 
+                p.add_(Phi, alpha=-lr)  # Note: here is -Phi
 
-                # GaLore Projection Back
-                if "galore_rank" in group:
-                    # norm_grad = state["projector"].project_back(norm_grad)
-
-                    if grad.dim() >= 2:
-                        Phi = state["projector"].project_back(Phi)
-
-                p.add_(Phi, alpha=-1)
 
                 # Just adding the square of the weights to the loss function is *not*
                 # the correct way of using L2 regularization/weight decay with Adam,
@@ -179,7 +176,7 @@ class ocpGNCorrect_galore(Optimizer):
                 # of the weights to the loss with plain (non-momentum) SGD.
                 # Add weight decay at the end (fixed version)
                 if group["weight_decay"] > 0.0:
-                    p.add_(p, alpha=(-lr * group["weight_decay"]))
+                    p.add_(p, alpha=(-group["lr"] * group["weight_decay"]))
 
         return loss
 

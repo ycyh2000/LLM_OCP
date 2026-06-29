@@ -39,7 +39,7 @@ def add_optimizer_params(parser: argparse.ArgumentParser):
     parser.add_argument('--i_lrs', type=str, default='0.00025', help='interval_lrs')
 
 
-class AdamW(Optimizer):
+class ocpGNCorrect(Optimizer):
     """ Implements Adam algorithm with weight decay fix.
     Parameters:
         lr (float): learning rate. Default 1e-3.
@@ -107,6 +107,7 @@ class AdamW(Optimizer):
                 momentum_buffer = state['momentum_buffer']
                 velocity_buffer = state['velocity_buffer']
 
+
                 # EMA calculation (same as MyOptimizer)
                 momentum_buffer.mul_(beta1).add_(grad, alpha=1 - beta1)
                 velocity_buffer.mul_(beta2).add_(grad * grad, alpha=1 - beta2)
@@ -120,23 +121,23 @@ class AdamW(Optimizer):
                 momentum_buffer_correct = momentum_buffer / bias_correction1
                 velocity_buffer_correct = velocity_buffer / bias_correction2
 
+                # Add Hessian clipping (key modification)
+                # velocity_buffer_correct = torch.clamp(velocity_buffer_correct, min=1e-8)
 
-                K_k_clipped = (1 - lr * velocity_buffer_correct)
+                # Correct iteration logic (key modification)
+                max_iterations = min(state['step'], 1)
 
-                eps = 1e-5
-
-                hess_safe = torch.clamp(velocity_buffer_correct, min=eps)
-                denom = lr * hess_safe
-
-                Phi = lr * torch.clamp(
-                    momentum_buffer_correct * K_k_clipped / denom,
-                    min=-1.0,
-                    max=1.0
-                )
+                Phi = momentum_buffer_correct * (
+                        1 - (1 - torch.clamp(lr * velocity_buffer_correct, min=0.2, max=0.8)) ** max_iterations) / (
+                        lr * velocity_buffer_correct + 1e-8)
+                Phi = torch.clamp(Phi, min=-1, max=1)
+                Phi = lr * Phi
 
                 # Parameter update (same as MyOptimizer)
                 p.data.mul_(1 - lr * weight_decay)
                 p.data.add_(-Phi)  # Note: here is -Phi
+
+
 
 
         return loss

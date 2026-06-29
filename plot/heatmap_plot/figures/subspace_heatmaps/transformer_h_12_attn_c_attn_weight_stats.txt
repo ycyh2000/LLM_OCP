@@ -1,0 +1,7 @@
+Layer: transformer_h_12_attn_c_attn_weight
+Num steps : 526
+Min       : 0.000549
+Max       : 1.000001
+Mean      : 0.720463
+Median    : 0.745014
+Std       : 0.120284

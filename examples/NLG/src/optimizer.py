@@ -211,35 +211,35 @@ class AdamW_galore(Optimizer):
                         grad = state["projector"].project(grad, state["step"])
 
 
-                        param_name = getattr(self, "param_name_map", {}).get(id(p), "unknown")
-
-                        print(
-                            f"[DEBUG] call save func: param={param_name}, step={state['step']}, grad_shape={tuple(grad.shape)}")
-
-                        save_galore_subspace_if_needed(
-                            param_name=param_name,
-                            p=p,
-                            state=state,
-                            group=group
-                        )
-
-                        end = time.perf_counter()
-
-                        if param_name != "unknown" and any(
-                            key in param_name for key in [
-                                "h.2.attn.c_attn.weight",
-                                "h.2.mlp.c_fc.weight",
-                                "h.12.attn.c_attn.weight",
-                                "h.12.mlp.c_fc.weight",
-                                "h.22.attn.c_attn.weight",
-                                "h.22.mlp.c_fc.weight",
-                            ]
-                        ):
-                            print(
-                                f"[GaLore projector] param={param_name}, "
-                                f"step={state['step']}, "
-                                f"time={(end - start) * 1000:.2f} ms"
-                            )
+                        # param_name = getattr(self, "param_name_map", {}).get(id(p), "unknown")
+                        #
+                        # print(
+                        #     f"[DEBUG] call save func: param={param_name}, step={state['step']}, grad_shape={tuple(grad.shape)}")
+                        #
+                        # save_galore_subspace_if_needed(
+                        #     param_name=param_name,
+                        #     p=p,
+                        #     state=state,
+                        #     group=group
+                        # )
+                        #
+                        # end = time.perf_counter()
+                        #
+                        # if param_name != "unknown" and any(
+                        #     key in param_name for key in [
+                        #         "h.2.attn.c_attn.weight",
+                        #         "h.2.mlp.c_fc.weight",
+                        #         "h.12.attn.c_attn.weight",
+                        #         "h.12.mlp.c_fc.weight",
+                        #         "h.22.attn.c_attn.weight",
+                        #         "h.22.mlp.c_fc.weight",
+                        #     ]
+                        # ):
+                        #     print(
+                        #         f"[GaLore projector] param={param_name}, "
+                        #         f"step={state['step']}, "
+                        #         f"time={(end - start) * 1000:.2f} ms"
+                        #     )
 
                 # State initialization
                 if "exp_avg" not in state:
@@ -275,259 +275,3 @@ class AdamW_galore(Optimizer):
                     p.add_(p, alpha=(-group["lr"] * group["weight_decay"]))
 
         return loss
-
-
-class CosineAnnealingWarmupRestarts(_LRScheduler):
-    def __init__(
-        self,
-        optimizer: torch.optim.Optimizer,
-        max_lr: float = 0.1,
-        min_lr: float = 0.0,
-        warmup_steps: int = 0,
-        max_steps: int = 1,
-        alpha: float = 0.,
-        last_epoch: int = -1
-    ):
-        self.max_lr = max_lr
-        self.min_lr = min_lr
-        self.warmup_steps = warmup_steps
-        self.alpha = alpha
-        self.max_steps = max_steps
-        super(CosineAnnealingWarmupRestarts, self).__init__(optimizer, last_epoch)
-        self.init_lr()
-
-    def init_lr(self):
-        for param_group in self.optimizer.param_groups:
-            param_group["lr"] = self.min_lr
-
-    def get_lr(self):
-        if self.last_epoch < self.warmup_steps:
-            return self.max_lr * self.last_epoch / self.warmup_steps
-        _step = min(self.last_epoch, self.max_steps)
-        cosine_decay = 0.5 * (1 + math.cos(math.pi * _step / self.max_steps))
-        decayed = (1 - self.alpha) * cosine_decay + self.alpha
-        return self.max_lr * decayed
-
-    def step(self, epoch=None):
-        if epoch is None:
-            epoch = self.last_epoch + 1
-
-        self.last_epoch = math.floor(epoch)
-        _lr = self.get_lr()
-        for param_group in self.optimizer.param_groups:
-            param_group["lr"] = _lr
-
-
-class CyclicScheduler(_LRScheduler):
-    def __init__(
-        self,
-        optimizer,
-        interval_steps=[],
-        interval_lrs=[],
-        last_epoch=-1,
-    ):
-        self.optimizer = optimizer
-        self.interval_steps = interval_steps
-        self.interval_lrs = interval_lrs
-        self.last_epoch = last_epoch
-
-        super(CyclicScheduler, self).__init__(optimizer, last_epoch)
-        self.init_lr()
-
-    def init_lr(self):
-        for param_group in self.optimizer.param_groups:
-            param_group["lr"] = self.interval_lrs[0]
-
-    def get_lr(self):
-        for _i in range(0, len(self.interval_steps) - 1):
-            if self.interval_steps[_i] <= self.last_epoch < self.interval_steps[_i + 1]:
-                _alpha = (self.last_epoch - self.interval_steps[_i]) / (
-                    self.interval_steps[_i + 1] - self.interval_steps[_i] + 1e-6
-                )
-                _alpha = max(0, min(_alpha, 1))
-                curr_lr = _alpha * self.interval_lrs[_i + 1] + (1.0 - _alpha) * self.interval_lrs[_i]
-                return curr_lr
-
-        return self.interval_lrs[-1]
-
-    def step(self, epoch=None):
-        if epoch is None:
-            epoch = self.last_epoch + 1
-
-        self.last_epoch = math.floor(epoch)
-        _lr = self.get_lr()
-        for param_group in self.optimizer.param_groups:
-            param_group["lr"] = _lr
-
-
-def get_linear_schedule_with_warmup(
-    optimizer,
-    num_warmup_steps,
-    num_training_steps,
-    last_epoch=-1
-):
-    def lr_lambda(current_step):
-        if current_step < num_warmup_steps:
-            return float(current_step) / float(max(1, num_warmup_steps))
-
-        return max(
-            0.0,
-            float(num_training_steps - current_step) / float(max(1, num_training_steps - num_warmup_steps))
-        )
-
-    return LambdaLR(optimizer, lr_lambda, last_epoch)
-
-
-def get_constant_schedule_with_warmup(
-    optimizer,
-    num_warmup_steps,
-    num_training_steps,
-    last_epoch=-1
-):
-    def lr_lambda(current_step):
-        if current_step < num_warmup_steps:
-            return float(current_step) / float(max(1, num_warmup_steps))
-
-        return 1.0
-
-    return LambdaLR(optimizer, lr_lambda, last_epoch)
-
-
-def create_grouped_parameters(model, no_decay_bias):
-    if not no_decay_bias:
-        optimizer_grouped_parameters = [
-            {
-                "params": [p for _, p in model.named_parameters()],
-            }
-        ]
-    else:
-        no_decay = ["bias", "layer_norm.weight"]
-
-        optimizer_grouped_parameters = [
-            {
-                "params": [
-                    p for n, p in model.named_parameters()
-                    if not any(nd in n for nd in no_decay)
-                ],
-            },
-            {
-                "params": [
-                    p for n, p in model.named_parameters()
-                    if any(nd in n for nd in no_decay)
-                ],
-                "weight_decay": 0.0,
-            }
-        ]
-
-    return optimizer_grouped_parameters
-
-
-def create_adam_optimizer(
-    model,
-    lr,
-    weight_decay,
-    optimizer_grouped_parameters=None,
-    beta1=0.9,
-    beta2=0.98,
-    correct_bias=True,
-    adam_epislon=1e-6,
-    no_decay_bias=False,
-    galore_rank=4,
-    update_proj_gap=200,
-    scale=1.0,
-    proj_type='std'
-):
-    if optimizer_grouped_parameters is None:
-        optimizer_grouped_parameters = create_grouped_parameters(model, no_decay_bias)
-
-    optimizer = AdamW_galore(
-        optimizer_grouped_parameters,
-        lr=lr,
-        betas=(beta1, beta2),
-        eps=adam_epislon,
-        weight_decay=weight_decay,
-        correct_bias=correct_bias,
-        galore_rank=galore_rank,
-        update_proj_gap=update_proj_gap,
-        scale=scale,
-        proj_type=proj_type
-    )
-
-    optimizer.param_name_map = {id(p): name for name, p in model.named_parameters()}
-    # print(f"optimizer.param_name_map = {optimizer.param_name_map}")
-
-    return optimizer
-
-
-def create_sgd_optimizer(model, lr):
-    return torch.optim.SGD(model.parameters(), lr=lr, momentum=0.0)
-
-
-def create_adam_optimizer_from_args(model, args, grouped_parameters=None):
-    if grouped_parameters is None:
-        grouped_parameters = create_grouped_parameters(model, args.no_decay_bias)
-
-    optimizer = AdamW_galore(
-        grouped_parameters,
-        lr=args.lr,
-        betas=(args.adam_beta1, args.adam_beta2),
-        eps=args.adam_epislon,
-        weight_decay=args.weight_decay,
-        correct_bias=args.correct_bias,
-        galore_rank=args.galore_rank,
-        update_proj_gap=args.update_proj_gap,
-        scale=args.galore_scale,
-        proj_type=args.proj_type
-    )
-
-    optimizer.param_name_map = {id(p): name for name, p in model.named_parameters()}
-    # print(f"optimizer.param_name_map = {optimizer.param_name_map}")
-
-    return optimizer
-
-
-def create_optimizer_scheduler(optimizer, args):
-    if args.scheduler == "cosine":
-        scheduler = CosineAnnealingWarmupRestarts(
-            optimizer,
-            max_lr=args.lr,
-            min_lr=0.0,
-            warmup_steps=args.warmup_step,
-            max_steps=args.max_step,
-            alpha=0
-        )
-
-    elif args.scheduler == "linear":
-        scheduler = get_linear_schedule_with_warmup(
-            optimizer,
-            args.warmup_step,
-            args.max_step,
-            last_epoch=-1
-        )
-
-    elif args.scheduler == "cycle":
-        if args.i_steps is not None:
-            args.i_steps = [int(_i) for _i in args.i_steps.split(",")]
-            args.i_lrs = [float(_i) for _i in args.i_lrs.split(",")]
-
-        args.max_step = args.i_steps[-1]
-        print("max_step is reset to", args.max_step)
-
-        scheduler = CyclicScheduler(
-            optimizer,
-            interval_steps=args.i_steps,
-            interval_lrs=args.i_lrs
-        )
-
-    elif args.scheduler == "constant":
-        scheduler = get_constant_schedule_with_warmup(
-            optimizer,
-            args.warmup_step,
-            args.max_step,
-            last_epoch=-1
-        )
-
-    else:
-        scheduler = None
-
-    return scheduler

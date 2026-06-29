@@ -30,9 +30,14 @@ from gpu import (
 #     create_adam_optimizer_from_args
 # )
 
-from optimizer import *
+# from optimizer_ocpGNCorrrect import *
+# from optimizer import *
 # from galore_optimizer import *
-
+# from optimizer_mofasgd import *
+# from optimizer_ocpGN_galore import *
+# from optimizer_ocpGNCorrect_galore import *
+from optimizer_adam_galore import *
+# from optimizer_ocpGNFalse_galore import *
 from data_utils import FT_Dataset
 from model import GPT2Config, GPT2LMModel
 from exp_utils import create_exp_dir
@@ -416,20 +421,35 @@ def create_adam_optimizer(
     if optimizer_grouped_parameters is None:
         optimizer_grouped_parameters = create_grouped_parameters(model, no_decay_bias)
 
-    optimizer = AdamW_galore(
-        optimizer_grouped_parameters,
-        lr=lr,
-        betas=(beta1, beta2),
-        eps=adam_epislon,
-        weight_decay=weight_decay,
-        correct_bias=correct_bias
+    # galore
+    # optimizer = AdamW_galore(
+    #     optimizer_grouped_parameters,
+    #     lr=lr,
+    #     betas=(beta1, beta2),
+    #     eps=adam_epislon,
+    #     weight_decay=weight_decay,
+    #     correct_bias=correct_bias
+    #     ,
+    #     galore_rank=galore_rank,
+    #     update_proj_gap=update_proj_gap,
+    #     scale=galore_scale,
+    #     proj_type=proj_type
+    # )
 
-        ,
-        galore_rank=galore_rank,
-        update_proj_gap=update_proj_gap,
-        scale=galore_scale,
-        proj_type=proj_type
-    )
+    # mofasgd
+    # optimizer = MomentumFactorizedSGD(
+    #     optimizer_grouped_parameters,
+    #     lr = lr,
+    #     rank = rank,
+    #     beta = beta1,
+    #     eta1 = eta1,
+    #     eta2 = eta2,
+    #     use_current_projection = use_current_projection,
+    #     use_ones_for_nonzero_s = use_ones_for_nonzero_s,
+    #     eps = eps,
+    #     nesterov = nesterov,
+    #     max_value = max_value
+    # )
 
     optimizer.param_name_map = {id(p): name for name, p in model.named_parameters()}
 
@@ -453,8 +473,45 @@ def create_adam_optimizer_from_args(model, args, grouped_parameters=None):
       parameters such as bias and LayerNorm weights are kept in a normal AdamW group
       to avoid shape errors in GaLoreProjector.
     """
+    # if grouped_parameters is None:
+    #     galore_params = []
+    #     regular_params = []
+    # 
+    #     for name, p in model.named_parameters():
+    #         if not p.requires_grad:
+    #             continue
+    # 
+    #         if p.dim() >= 2:
+    #             galore_params.append(p)
+    #         else:
+    #             regular_params.append(p)
+    # 
+    #     grouped_parameters = []
+    # 
+    #     if len(galore_params) > 0:
+    #         grouped_parameters.append({
+    #             "params": galore_params,
+    #             "rank": args.galore_rank,
+    #             "update_proj_gap": args.update_proj_gap,
+    #             "scale": args.galore_scale,
+    #             "proj_type": args.proj_type,
+    #             "dim": 2,
+    #         })
+    # 
+    #     if len(regular_params) > 0:
+    #         grouped_parameters.append({
+    #             "params": regular_params,
+    #         })
+    # 
+    #     # if args.rank == 0:
+    #     #     galore_num = sum(p.numel() for p in galore_params)
+    #     #     regular_num = sum(p.numel() for p in regular_params)
+    #     #     print(f"GaLore parameter count : {galore_num / 1e6:.2f}M")
+    #     #     print(f"Regular parameter count: {regular_num / 1e6:.2f}M")
+
+
     if grouped_parameters is None:
-        galore_params = []
+        mofasgd_params = []
         regular_params = []
 
         for name, p in model.named_parameters():
@@ -462,33 +519,22 @@ def create_adam_optimizer_from_args(model, args, grouped_parameters=None):
                 continue
 
             if p.dim() >= 2:
-                galore_params.append(p)
+                mofasgd_params.append(p)
             else:
                 regular_params.append(p)
 
         grouped_parameters = []
 
-        if len(galore_params) > 0:
+        if len(mofasgd_params) > 0:
             grouped_parameters.append({
-                "params": galore_params,
-                "rank": args.galore_rank,
-                "update_proj_gap": args.update_proj_gap,
-                "scale": args.galore_scale,
-                "proj_type": args.proj_type,
-                "dim": 2,
-            })
-
-        if len(regular_params) > 0:
-            grouped_parameters.append({
-                "params": regular_params,
+                "params": mofasgd_params,
             })
 
         if args.rank == 0:
-            galore_num = sum(p.numel() for p in galore_params)
-            regular_num = sum(p.numel() for p in regular_params)
-            print(f"GaLore parameter count : {galore_num / 1e6:.2f}M")
-            print(f"Regular parameter count: {regular_num / 1e6:.2f}M")
+            print(f"MoFaSGD 2D parameter count: {sum(p.numel() for p in mofasgd_params) / 1e6:.2f}M")
+            print(f"Skipped 1D parameter count : {sum(p.numel() for p in regular_params) / 1e6:.2f}M")
 
+    # AdamW_galore
     optimizer = AdamW_galore(
         grouped_parameters,
         lr=args.lr,
@@ -504,6 +550,52 @@ def create_adam_optimizer_from_args(model, args, grouped_parameters=None):
         proj_type=args.proj_type
     )
 
+    # MoFaSGD
+    
+    # optimizer = MomentumFactorizedSGD(
+    #     grouped_parameters,
+    #     lr = args.lr,
+    #     rank = args.mofasgd_rank,
+    #     beta = args.beta,
+    #     eta1 = args.eta1,
+    #     eta2 = args.eta2,
+    #     use_current_projection = args.use_current_projection,
+    #     use_ones_for_nonzero_s = args.use_ones_for_nonzero_s,
+    #     eps = args.eps,
+    #     nesterov = args.nesterov,
+    #     max_value = args.max_value
+
+    #ocpGN
+    # optimizer = ocpGN_galore(
+    #     grouped_parameters,
+    #     lr=args.lr,
+    #     betas=(args.adam_beta1, args.adam_beta2),
+    #     eps=args.adam_epislon,
+    #     weight_decay=args.weight_decay,
+    #     correct_bias=args.correct_bias
+    # 
+    #     ,
+    #     galore_rank=args.galore_rank,
+    #     update_proj_gap=args.update_proj_gap,
+    #     scale=args.galore_scale,
+    #     proj_type=args.proj_type
+    # )
+
+    #ocpGNCorrect
+    # optimizer = ocpGNCorrect_galore(
+    #     grouped_parameters,
+    #     lr=args.lr,
+    #     betas=(args.adam_beta1, args.adam_beta2),
+    #     eps=args.adam_epislon,
+    #     weight_decay=args.weight_decay,
+    #     correct_bias=args.correct_bias
+    # 
+    #     ,
+    #     galore_rank=args.galore_rank,
+    #     update_proj_gap=args.update_proj_gap,
+    #     scale=args.galore_scale,
+    #     proj_type=args.proj_type
+    # )
     optimizer.param_name_map = {id(p): name for name, p in model.named_parameters()}
     # print(f"optimizer.param_name_map = {optimizer.param_name_map}")
 

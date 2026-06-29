@@ -125,7 +125,7 @@ class AdamW(Optimizer):
                 for _ in range(max_iterations):
                     # Use the exact same formula as MyOptimizer
                     K_k_clipped = (1 - lr * velocity_buffer_correct)
-                    print(f"K_k_clipped = {K_k_clipped}")
+                    # print(f"K_k_clipped = {K_k_clipped}")
                     K_k_clipped = torch.clamp(K_k_clipped, max=1)
                     K_k_clipped = torch.clamp(K_k_clipped, min=0.001)
 

@@ -120,11 +120,11 @@ class AdamW_galore(Optimizer):
                     # grad = state["projector"].project(grad, state["step"])
 
 
-                    start = time.perf_counter()
+                    # start = time.perf_counter()
                     if grad.dim() >= 2:
                         grad = state["projector"].project(grad, state["step"])
-                    end = time.perf_counter()
-                    print(f"grad projector time: {(end - start) * 1000:.2f} ms")
+                    # end = time.perf_counter()
+                    # print(f"grad projector time: {(end - start) * 1000:.2f} ms")
 
                 # State initialization
                 if "exp_avg" not in state:

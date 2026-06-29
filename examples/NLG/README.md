@@ -49,7 +49,7 @@ There are several directories in this repo:
 
 1. Train GPT-2 Medium with LoRA (see our paper for hyperparameters for GPT-2 Medium)
 ```
-nohup env CUDA_VISIBLE_DEVICES=1 torchrun \
+nohup env CUDA_VISIBLE_DEVICES=3 torchrun \
     --nproc_per_node=1  \
     --rdzv_endpoint=localhost:29511 src/gpt2_ft.py \
     --train_data ./data/e2e/train.jsonl \
@@ -63,7 +63,7 @@ nohup env CUDA_VISIBLE_DEVICES=1 torchrun \
     --init_checkpoint ./pretrained_checkpoints/gpt2-medium-pytorch_model.bin \
     --platform local \
     --clip 0.0 \
-    --lr 0.0005 \
+    --lr 0.0001 \
     --weight_decay 0.01 \
     --correct_bias \
     --adam_beta2 0.999 \
@@ -76,14 +76,49 @@ nohup env CUDA_VISIBLE_DEVICES=1 torchrun \
     --lora_dropout 0.1 \
     --label_smooth 0.1 \
     --work_dir ./trained_models/GPT2_M/e2e \
-    --random_seed 110 > training_0.0005_ocpGNCorrect_.log 2>&1 &
+    --random_seed 110 > training_0.0001_ocpGNCorrect.log 2>&1 &
 ```
 
 
-```
-nohup env CUDA_VISIBLE_DEVICES=1 torchrun \
+```galore
+nohup env CUDA_VISIBLE_DEVICES=0 torchrun \
     --nproc_per_node=1  \
-    --rdzv_endpoint=localhost:29513 src/gpt2_ft.py \
+    --rdzv_endpoint=localhost:29504 src/gpt2_ft.py \
+    --train_data ./data/e2e/train.jsonl \
+    --valid_data ./data/e2e/valid.jsonl \
+    --train_batch_size 8 \
+    --grad_acc 1 \
+    --valid_batch_size 4 \
+    --valid_batch_size 4 \
+    --seq_len 512 \
+    --model_card gpt2.md \
+    --init_checkpoint ./pretrained_checkpoints/gpt2-medium-pytorch_model.bin \
+    --platform local \
+    --clip 0.0 \
+    --lr 0.0004 \
+    --weight_decay 0.01 \
+    --correct_bias \
+    --adam_beta2 0.999 \
+    --scheduler None \
+    --warmup_step 500 \
+    --max_epoch 5 \
+    --save_interval 1000 \
+    --lora_dim 0 \
+    --lora_alpha 32 \
+    --lora_dropout 0.1 \
+    --galore_rank 4 \
+    --update_proj_gap 50 \
+    --galore_scale 1.0 \
+    --proj_type std \
+    --label_smooth 0.1 \
+    --work_dir ./trained_models/GPT2_M/e2e \
+    --random_seed 110 > training_0.0004_adamw_galore_message_record.log 2>&1 &
+```
+
+```mofasgd
+nohup env CUDA_VISIBLE_DEVICES=0 torchrun \
+    --nproc_per_node=1  \
+    --rdzv_endpoint=localhost:29506 src/gpt2_ft.py \
     --train_data ./data/e2e/train.jsonl \
     --valid_data ./data/e2e/valid.jsonl \
     --train_batch_size 8 \
@@ -106,13 +141,9 @@ nohup env CUDA_VISIBLE_DEVICES=1 torchrun \
     --lora_dim 0 \
     --lora_alpha 32 \
     --lora_dropout 0.1 \
-    --galore_rank 1 \
-    --update_proj_gap 50 \
-    --galore_scale 1.0 \
-    --proj_type std \
     --label_smooth 0.1 \
     --work_dir ./trained_models/GPT2_M/e2e \
-    --random_seed 110 > training_0.0005_adamw_galore_message_record.log 2>&1 &
+    --random_seed 110 > training_0.0005_mofasgd_message_record.log 2>&1 &
 ```
 
 
