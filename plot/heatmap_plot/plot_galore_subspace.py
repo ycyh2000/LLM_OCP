@@ -38,7 +38,7 @@ def parse_step(path):
 
 
 def main():
-    subspace_dir = "/home/ycyh/code/LLM/LoRA-main/LoRA-main/examples/NLG/subspace/rank_1_gap_50"
+    subspace_dir = "/examples/NLG/subspace/rank_1_gap_50"
     files = sorted(glob.glob(os.path.join(subspace_dir, "*.pt")), key=parse_step)
 
     if len(files) == 0:
@@ -52,7 +52,7 @@ def main():
         layer_name = base.split("_step_")[0]
         layer_groups.setdefault(layer_name, []).append(f)
 
-    os.makedirs("./figures", exist_ok=True)
+    os.makedirs("figures", exist_ok=True)
 
     for layer_name, paths in layer_groups.items():
         paths = sorted(paths, key=parse_step)
@@ -81,7 +81,7 @@ def main():
         plt.title(layer_name)
         plt.grid(True)
 
-        save_path = f"./figures/{layer_name}_subspace_similarity.png"
+        save_path = f"figures/{layer_name}_subspace_similarity.png"
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
         plt.close()
 

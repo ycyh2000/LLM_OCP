@@ -81,9 +81,9 @@ nohup env CUDA_VISIBLE_DEVICES=3 torchrun \
 
 
 ```galore
-nohup env CUDA_VISIBLE_DEVICES=0 torchrun \
+nohup env CUDA_VISIBLE_DEVICES=2 torchrun \
     --nproc_per_node=1  \
-    --rdzv_endpoint=localhost:29504 src/gpt2_ft.py \
+    --rdzv_endpoint=localhost:29513 src/gpt2_ft.py \
     --train_data ./data/e2e/train.jsonl \
     --valid_data ./data/e2e/valid.jsonl \
     --train_batch_size 8 \
@@ -112,7 +112,7 @@ nohup env CUDA_VISIBLE_DEVICES=0 torchrun \
     --proj_type std \
     --label_smooth 0.1 \
     --work_dir ./trained_models/GPT2_M/e2e \
-    --random_seed 110 > training_0.0004_adamw_galore_message_record.log 2>&1 &
+    --random_seed 110 > training_0.0004_ocpGNCorrect_galore2.log 2>&1 &
 ```
 
 ```mofasgd

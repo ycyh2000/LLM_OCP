@@ -14,8 +14,8 @@ from torch.nn import CrossEntropyLoss, MSELoss
 import torch.nn.functional as F
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
-from galore_projector import GaLoreProjector
-from galore_projector_tensor import GaLoreProjectorTensor
+from galore2_projector import GaLore2Projector
+from galore2_projector_tensor import GaLore2ProjectorTensor
 import time
 
 
@@ -113,20 +113,20 @@ class ocpGNCorrect_galore(Optimizer):
                 if "galore_rank" in group:
                     if "projector" not in state:
                         if group['dim'] <= 2:
-                            state["projector"] = GaLoreProjector(group["galore_rank"],
+                            state["projector"] = GaLore2Projector(group["galore_rank"],
                                                                  update_proj_gap=group["update_proj_gap"],
                                                                  scale=group["scale"], proj_type=group["proj_type"])
                         else:
-                            state["projector"] = GaLoreProjectorTensor(group["galore_rank"],
+                            state["projector"] = GaLore2ProjectorTensor(group["galore_rank"],
                                                                        update_proj_gap=group["update_proj_gap"],
                                                                        scale=group["scale"],
                                                                        proj_type=group["proj_type"])
                     # grad = state["projector"].project(grad, state["step"])
 
-                    start = time.perf_counter()
+                    # start = time.perf_counter()
                     if grad.dim() >= 2:
                         grad = state["projector"].project(grad, state["step"])
-                    end = time.perf_counter()
+                    # end = time.perf_counter()
                     # print(f"grad projector time: {(end - start) * 1000:.2f} ms")
 
                 # State initialization
@@ -146,27 +146,19 @@ class ocpGNCorrect_galore(Optimizer):
                 exp_avg.mul_(beta1).add_(grad, alpha=(1.0 - beta1))
                 exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1.0 - beta2)
 
-                step_size = group["lr"]
-                if group["correct_bias"]:  # No bias correction for Bert
-                    bias_correction1 = 1.0 - beta1 ** state["step"]
-                    bias_correction2 = 1.0 - beta2 ** state["step"]
-                    exp_avg = exp_avg / bias_correction1
-                    exp_avg_sq = exp_avg_sq / bias_correction2
-                    # step_size = step_size * math.sqrt(bias_correction2) / bias_correction1
 
+                bias_correction1 = 1.0 - beta1 ** state["step"]
+                bias_correction2 = 1.0 - beta2 ** state["step"]
+                exp_avg = exp_avg / bias_correction1
+                exp_avg_sq = exp_avg_sq / bias_correction2
 
-                K_k_clipped = (1 - lr * exp_avg_sq)
+                max_iterations = min(state['step'], 1)
 
-                eps = 1e-5
-
-                hess_safe = torch.clamp(exp_avg_sq, min=eps)
-                denom = lr * hess_safe
-
-                Phi = lr * torch.clamp(
-                    exp_avg * K_k_clipped / denom,
-                    min=-1.0,
-                    max=1.0
-                )
+                Phi = exp_avg * (
+                            1 - (1 - torch.clamp(lr * exp_avg_sq, min=0.2, max=0.8)) ** max_iterations) / (
+                                  lr * exp_avg_sq + 1e-8)
+                Phi = torch.clamp(Phi, min=-1, max=1)
+                Phi = lr * Phi
 
 
                 # GaLore Projection Back
@@ -176,7 +168,7 @@ class ocpGNCorrect_galore(Optimizer):
                     if grad.dim() >= 2:
                         Phi = state["projector"].project_back(Phi)
 
-                p.add_(Phi, alpha=-step_size)
+                p.add_(Phi, alpha=-1)
 
                 # Just adding the square of the weights to the loss function is *not*
                 # the correct way of using L2 regularization/weight decay with Adam,
@@ -187,7 +179,7 @@ class ocpGNCorrect_galore(Optimizer):
                 # of the weights to the loss with plain (non-momentum) SGD.
                 # Add weight decay at the end (fixed version)
                 if group["weight_decay"] > 0.0:
-                    p.add_(p, alpha=(-group["lr"] * group["weight_decay"]))
+                    p.add_(p, alpha=(-lr * group["weight_decay"]))
 
         return loss
 

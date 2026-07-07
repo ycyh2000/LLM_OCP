@@ -1,0 +1,101 @@
+nohup: ignoring input
+myrank: 0 local_rank: 0 device_count: 1 world_size: 1
+====================================================================================================
+        - platform : local
+        - local_rank : 0
+        - rank : 0
+        - device : cuda:0
+        - world_size : 1
+        - random_seed : 110
+        - lr : 0.0004
+        - weight_decay : 0.01
+        - correct_bias : True
+        - adam_epislon : 1e-06
+        - no_decay_bias : False
+        - adam_beta1 : 0.9
+        - adam_beta2 : 0.999
+        - scheduler : None
+        - max_step : None
+        - max_epoch : 5
+        - warmup_step : 500
+        - i_steps : 0
+        - i_lrs : 0.00025
+        - galore_rank : 4
+        - update_proj_gap : 50
+        - galore_scale : 1.0
+        - proj_type : std
+        - train_data : ./data/e2e/train.jsonl
+        - valid_data : ./data/e2e/valid.jsonl
+        - train_batch_size : 8
+        - valid_batch_size : 4
+        - grad_acc : 1
+        - clip : 0.0
+        - seq_len : 512
+        - model_card : gpt2.md
+        - init_checkpoint : ./pretrained_checkpoints/gpt2-medium-pytorch_model.bin
+        - fp16 : False
+        - log_interval : 100
+        - eval_interval : 2000
+        - save_interval : 1000
+        - work_dir : ./trained_models/GPT2_M/e2e
+        - lora_dim : 0
+        - lora_alpha : 32
+        - obj : clm
+        - lora_dropout : 0.1
+        - label_smooth : 0.1
+        - roll_interval : -1
+        - roll_lr : 1e-05
+        - roll_step : 100
+        - eval_epoch : 1
+        - dist : <module 'torch.distributed' from '/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/__init__.py'>
+====================================================================================================
+Experiment dir : ./trained_models/GPT2_M/e2e
+loading model pretrained weight.
+MoFaSGD 2D parameter count: 354.50M
+Skipped 1D parameter count : 0.32M
+set max_step: 26290
+start to train the model................ 1
+| epoch   1 step      100 |    100 batches | lr 0.0004 | ms/batch 800.40 | loss  3.26 | avg loss  3.03 | ppl 20.72
+| epoch   1 step      200 |    200 batches | lr 0.0004 | ms/batch 811.23 | loss  2.77 | avg loss  2.75 | ppl 15.71
+| epoch   1 step      300 |    300 batches | lr 0.0004 | ms/batch 813.45 | loss  2.72 | avg loss  2.69 | ppl 14.79
+| epoch   1 step      400 |    400 batches | lr 0.0004 | ms/batch 815.02 | loss  2.75 | avg loss  2.68 | ppl 14.65
+| epoch   1 step      500 |    500 batches | lr 0.0004 | ms/batch 1336.39 | loss  2.55 | avg loss  2.63 | ppl 13.85
+| epoch   1 step      600 |    600 batches | lr 0.0004 | ms/batch 1737.60 | loss  2.53 | avg loss  2.60 | ppl 13.45
+| epoch   1 step      700 |    700 batches | lr 0.0004 | ms/batch 1757.80 | loss  2.70 | avg loss  2.59 | ppl 13.28
+| epoch   1 step      800 |    800 batches | lr 0.0004 | ms/batch 1761.31 | loss  2.32 | avg loss  2.57 | ppl 13.04
+| epoch   1 step      900 |    900 batches | lr 0.0004 | ms/batch 1757.39 | loss  2.34 | avg loss  2.56 | ppl 12.96
+| epoch   1 step     1000 |   1000 batches | lr 0.0004 | ms/batch 1756.61 | loss  2.99 | avg loss  2.58 | ppl 13.21
+saving checkpoint ./trained_models/GPT2_M/e2e/model.1000.pt
+/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/distributed/distributed_c10d.py:4631: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+| epoch   1 step     1100 |   1100 batches | lr 0.0004 | ms/batch 1854.25 | loss  2.64 | avg loss  2.59 | ppl 13.30
+| epoch   1 step     1200 |   1200 batches | lr 0.0004 | ms/batch 1752.53 | loss  2.42 | avg loss  2.59 | ppl 13.34
+| epoch   1 step     1300 |   1300 batches | lr 0.0004 | ms/batch 1662.74 | loss  2.44 | avg loss  2.56 | ppl 12.93
+| epoch   1 step     1400 |   1400 batches | lr 0.0004 | ms/batch 1752.10 | loss  2.50 | avg loss  2.55 | ppl 12.83
+| epoch   1 step     1500 |   1500 batches | lr 0.0004 | ms/batch 1757.95 | loss  2.52 | avg loss  2.57 | ppl 13.06
+| epoch   1 step     1600 |   1600 batches | lr 0.0004 | ms/batch 1757.74 | loss  2.58 | avg loss  2.53 | ppl 12.55
+| epoch   1 step     1700 |   1700 batches | lr 0.0004 | ms/batch 1759.04 | loss  2.38 | avg loss  2.54 | ppl 12.64
+| epoch   1 step     1800 |   1800 batches | lr 0.0004 | ms/batch 1759.21 | loss  2.41 | avg loss  2.54 | ppl 12.69
+| epoch   1 step     1900 |   1900 batches | lr 0.0004 | ms/batch 1761.61 | loss  2.56 | avg loss  2.54 | ppl 12.72
+| epoch   1 step     2000 |   2000 batches | lr 0.0004 | ms/batch 1757.69 | loss  2.42 | avg loss  2.53 | ppl 12.60
+saving checkpoint ./trained_models/GPT2_M/e2e/model.2000.pt
+/home/ycyh/miniconda3/envs/LoRA/lib/python3.11/site-packages/torch/nn/_reduction.py:51: UserWarning: size_average and reduce args will be deprecated, please use reduction='none' instead.
+  warnings.warn(warning.format(ret))
+eval samples: 0 loss: tensor(1.2408, device='cuda:0')
+eval samples: 100 loss: tensor(0.8573, device='cuda:0')
+eval samples: 200 loss: tensor(1.2873, device='cuda:0')
+eval samples: 300 loss: tensor(1.1169, device='cuda:0')
+eval samples: 400 loss: tensor(0.8720, device='cuda:0')
+eval samples: 500 loss: tensor(0.6584, device='cuda:0')
+eval samples: 600 loss: tensor(1.2958, device='cuda:0')
+eval samples: 700 loss: tensor(0.7376, device='cuda:0')
+eval samples: 800 loss: tensor(1.1798, device='cuda:0')
+eval samples: 900 loss: tensor(1.6897, device='cuda:0')
+eval samples: 1000 loss: tensor(1.0522, device='cuda:0')
+eval samples: 1100 loss: tensor(1.5086, device='cuda:0')
+average loss 1.2376287262121293
+----------------------------------------------------------------------------------------------------
+| Eval   1 at step     2000 | time: 344.38s | valid loss  1.24 | valid ppl  3.45 | best ppl  3.45 
+----------------------------------------------------------------------------------------------------
+| epoch   1 step     2100 |   2100 batches | lr 0.0004 | ms/batch 5303.96 | loss  2.54 | avg loss  2.53 | ppl 12.58
+| epoch   1 step     2200 |   2200 batches | lr 0.0004 | ms/batch 1758.92 | loss  2.80 | avg loss  2.52 | ppl 12.46

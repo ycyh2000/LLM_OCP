@@ -117,8 +117,8 @@ def plot_one_layer(layer_name, paths, output_dir):
 
 
 def main():
-    subspace_dir = "/home/ycyh/code/LLM/LoRA-main/LoRA-main/examples/NLG/subspace/rank_1_gap_50"
-    output_dir = "./figures/subspace_heatmaps"
+    subspace_dir = "/examples/NLG/subspace/rank_1_gap_50"
+    output_dir = "figures/subspace_heatmaps"
     os.makedirs(output_dir, exist_ok=True)
 
     files = glob.glob(os.path.join(subspace_dir, "*.pt"))
