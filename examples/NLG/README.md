@@ -81,9 +81,9 @@ nohup env CUDA_VISIBLE_DEVICES=3 torchrun \
 
 
 ```galore
-nohup env CUDA_VISIBLE_DEVICES=2 torchrun \
+nohup env CUDA_VISIBLE_DEVICES=0 torchrun \
     --nproc_per_node=1  \
-    --rdzv_endpoint=localhost:29513 src/gpt2_ft.py \
+    --rdzv_endpoint=localhost:29507 src/gpt2_ft.py \
     --train_data ./data/e2e/train.jsonl \
     --valid_data ./data/e2e/valid.jsonl \
     --train_batch_size 8 \
@@ -95,7 +95,7 @@ nohup env CUDA_VISIBLE_DEVICES=2 torchrun \
     --init_checkpoint ./pretrained_checkpoints/gpt2-medium-pytorch_model.bin \
     --platform local \
     --clip 0.0 \
-    --lr 0.0004 \
+    --lr 0.0003 \
     --weight_decay 0.01 \
     --correct_bias \
     --adam_beta2 0.999 \
@@ -112,8 +112,47 @@ nohup env CUDA_VISIBLE_DEVICES=2 torchrun \
     --proj_type std \
     --label_smooth 0.1 \
     --work_dir ./trained_models/GPT2_M/e2e \
-    --random_seed 110 > training_0.0004_ocpGNCorrect_galore2.log 2>&1 &
+    --random_seed 110 > training_0.0003_adamw_galore.log 2>&1 &
 ```
+
+
+```lotus
+nohup env CUDA_VISIBLE_DEVICES=1 torchrun \
+    --nproc_per_node=1  \
+    --rdzv_endpoint=localhost:29512 src/gpt2_ft.py \
+    --train_data ./data/e2e/train.jsonl \
+    --valid_data ./data/e2e/valid.jsonl \
+    --train_batch_size 8 \
+    --grad_acc 1 \
+    --valid_batch_size 4 \
+    --valid_batch_size 4 \
+    --seq_len 512 \
+    --model_card gpt2.md \
+    --init_checkpoint ./pretrained_checkpoints/gpt2-medium-pytorch_model.bin \
+    --platform local \
+    --clip 0.0 \
+    --lr 0.0002 \
+    --weight_decay 0.01 \
+    --correct_bias \
+    --adam_beta2 0.999 \
+    --scheduler None \
+    --warmup_step 500 \
+    --max_epoch 5 \
+    --save_interval 1000 \
+    --lora_dim 0 \
+    --lora_alpha 32 \
+    --lora_dropout 0.1 \
+    --galore_rank 4 \
+    --update_proj_gap 50 \
+    --galore_scale 1.0 \
+    --proj_type std \
+    --label_smooth 0.1 \
+    --gamma 0.01 \
+    --work_dir ./trained_models/GPT2_M/e2e \
+    --random_seed 110 > training_0.0002_ocpGNCorrect_lotus.log 2>&1 &
+```
+
+
 
 ```mofasgd
 nohup env CUDA_VISIBLE_DEVICES=0 torchrun \
