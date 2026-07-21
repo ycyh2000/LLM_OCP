@@ -18,3 +18,4 @@ __pycache__/
 # misc
 *.swp
 .DS_Store
+examples/NLG/*.log
