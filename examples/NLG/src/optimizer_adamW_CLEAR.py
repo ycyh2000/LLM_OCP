@@ -1,3 +1,4 @@
+
 #  ------------------------------------------------------------------------------------------
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #  Licensed under the MIT License (MIT). See LICENSE in the repo root for license information.
@@ -14,8 +15,8 @@ from torch.nn import CrossEntropyLoss, MSELoss
 import torch.nn.functional as F
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
-from galore_projector import GaLoreProjector
-from galore_projector_tensor import GaLoreProjectorTensor
+from CLEAR_projector import CLEARProjector
+from CLEAR_projector_tensor import CLEARProjectorTensor
 import time
 
 
@@ -47,8 +48,11 @@ def add_optimizer_params(parser: argparse.ArgumentParser):
     parser.add_argument("--galore_scale", type=float, default=1.0)
     parser.add_argument("--proj_type", type=str, default="std")
 
+    # lotus parameter
+    parser.add_argument("--gamma", type=float, default=0.01)
 
-class ocpGNCorrect_galore(Optimizer):
+
+class adamW_CLEAR(Optimizer):
     """ Implements Adam algorithm with weight decay fix.
     Parameters:
         lr (float): learning rate. Default 1e-3.
@@ -59,7 +63,7 @@ class ocpGNCorrect_galore(Optimizer):
     """
 
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.98), eps=1e-6, weight_decay=0.0, correct_bias=True, galore_rank=4,
-                 update_proj_gap=200, scale=1.0, proj_type='std'):
+                 update_proj_gap=200, scale=1.0, proj_type='std', gamma=0.01):
         if lr < 0.0:
             raise ValueError("Invalid learning rate: {} - should be >= 0.0".format(lr))
         if not 0.0 <= betas[0] < 1.0:
@@ -69,7 +73,8 @@ class ocpGNCorrect_galore(Optimizer):
         if not 0.0 <= eps:
             raise ValueError("Invalid epsilon value: {} - should be >= 0.0".format(eps))
         defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, correct_bias=correct_bias,
-                        galore_rank=galore_rank, update_proj_gap=update_proj_gap, scale=scale, proj_type=proj_type)
+                        galore_rank=galore_rank, update_proj_gap=update_proj_gap, scale=scale, proj_type=proj_type,
+                        gamma=gamma)
         super().__init__(params, defaults)
 
     def reset_state(self):
@@ -113,24 +118,31 @@ class ocpGNCorrect_galore(Optimizer):
                 if "galore_rank" in group:
                     if "projector" not in state:
                         if group['dim'] <= 2:
-                            state["projector"] = GaLoreProjector(group["galore_rank"],
-                                                                 update_proj_gap=group["update_proj_gap"],
-                                                                 scale=group["scale"], proj_type=group["proj_type"])
+                            state["projector"] = CLEARProjector(group["galore_rank"],
+                                                                update_proj_gap=group["update_proj_gap"],
+                                                                scale=group["scale"],
+                                                                proj_type=group["proj_type"],
+                                                                gamma=group["gamma"]
+                                                                )
+
                         else:
-                            state["projector"] = GaLoreProjectorTensor(group["galore_rank"],
-                                                                       update_proj_gap=group["update_proj_gap"],
-                                                                       scale=group["scale"],
-                                                                       proj_type=group["proj_type"])
+                            state["projector"] = CLEARProjectorTensor(group["galore_rank"],
+                                                                      update_proj_gap=group["update_proj_gap"],
+                                                                      scale=group["scale"],
+                                                                      proj_type=group["proj_type"],
+                                                                      gamma=group["gamma"]
+                                                                      )
                     # grad = state["projector"].project(grad, state["step"])
 
-                    start = time.perf_counter()
+                    # start = time.perf_counter()
                     if grad.dim() >= 2:
-                        grad = state["projector"].project(grad, state["step"])
-                    end = time.perf_counter()
+                        grad, should_update_subspace = state["projector"].project(grad, state["step"])
+                    # end = time.perf_counter()
                     # print(f"grad projector time: {(end - start) * 1000:.2f} ms")
 
-                # State initialization
+                    # State initialization
                 if "exp_avg" not in state:
+                    state["step"] = 0
                     # Exponential moving average of gradient values
                     state["exp_avg"] = torch.zeros_like(grad)
                     # Exponential moving average of squared gradient values
@@ -143,40 +155,26 @@ class ocpGNCorrect_galore(Optimizer):
 
                 # Decay the first and second moment running average coefficient
                 # In-place operations to update the averages at the same time
-                exp_avg.mul_(beta1).add_(grad, alpha=(1.0 - beta1))
+                exp_avg.mul_(beta1).add_(grad, alpha=1.0 - beta1)
                 exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1.0 - beta2)
+                denom = exp_avg_sq.sqrt().add_(group["eps"])
 
                 step_size = group["lr"]
-                if group["correct_bias"]:  # No bias correction for Bert
+                if 'correct_bias' in group and group["correct_bias"]:  # No bias correction for Bert
                     bias_correction1 = 1.0 - beta1 ** state["step"]
                     bias_correction2 = 1.0 - beta2 ** state["step"]
-                    exp_avg = exp_avg / bias_correction1
-                    exp_avg_sq = exp_avg_sq / bias_correction2
-                    # step_size = step_size * math.sqrt(bias_correction2) / bias_correction1
+                    step_size = step_size * math.sqrt(bias_correction2) / bias_correction1
 
-
-                K_k_clipped = (1 - lr * exp_avg_sq)
-
-                eps = 1e-5
-
-                hess_safe = torch.clamp(exp_avg_sq, min=eps)
-                denom = lr * hess_safe
-
-                Phi = lr * torch.clamp(
-                    exp_avg * K_k_clipped / denom,
-                    min=-1.0,
-                    max=1.0
-                )
-
+                update = exp_avg / denom
 
                 # GaLore Projection Back
                 if "galore_rank" in group:
                     # norm_grad = state["projector"].project_back(norm_grad)
 
                     if grad.dim() >= 2:
-                        Phi = state["projector"].project_back(Phi)
+                        update = state["projector"].project_back(update)
 
-                p.add_(Phi, alpha=-step_size)
+                p.data.add_(update, alpha=(-step_size))
 
                 # Just adding the square of the weights to the loss function is *not*
                 # the correct way of using L2 regularization/weight decay with Adam,
@@ -187,7 +185,7 @@ class ocpGNCorrect_galore(Optimizer):
                 # of the weights to the loss with plain (non-momentum) SGD.
                 # Add weight decay at the end (fixed version)
                 if group["weight_decay"] > 0.0:
-                    p.add_(p, alpha=(-group["lr"] * group["weight_decay"]))
+                    p.add_(p, alpha=(-lr * group["weight_decay"]))
 
         return loss
 
@@ -274,7 +272,7 @@ class CyclicScheduler(_LRScheduler):
         for _i in range(0, len(self.interval_steps) - 1):
             if self.last_epoch >= self.interval_steps[_i] and self.last_epoch < self.interval_steps[_i + 1]:
                 _alpha = (self.last_epoch - self.interval_steps[_i]) / (
-                            self.interval_steps[_i + 1] - self.interval_steps[_i] + 1e-6)
+                        self.interval_steps[_i + 1] - self.interval_steps[_i] + 1e-6)
                 if _alpha < 0:
                     _alpha = 0
                 if _alpha >= 1:

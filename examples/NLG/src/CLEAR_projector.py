@@ -3,7 +3,7 @@ import math
 import torch
 
 
-class lotusProjector:
+class CLEARProjector:
     def __init__(
         self,
         rank,
@@ -16,7 +16,7 @@ class lotusProjector:
         sign_align=True
 
         #CLEAR parameter
-        ,gamma = 0.01
+        ,gamma = 0.9
     ):
         self.rank = rank
         self.verbose = verbose
@@ -47,6 +47,7 @@ class lotusProjector:
         self.full_rank_fro_cos_lower = 0
         self.full_rank_fro_cos_upper = 0
         self.gamma = gamma
+        self.current_iteration = 0
 
 
 
@@ -79,8 +80,11 @@ class lotusProjector:
                     low_rank_grad.float(),
                     ord="fro"
                 )
-                self.rho_cur = low_rank_grad_fro_norm / full_rank_grad_fro_norm
-
+                # self.rho_cur = low_rank_grad_fro_norm / full_rank_grad_fro_norm
+                self.rho_cur = (
+                        low_rank_grad_fro_norm.square()
+                        / full_rank_grad_fro_norm.square().clamp_min(1e-12)
+                ).clamp(0.0, 1.0)
                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 # calculate frobenius norm of current low rank gradient
@@ -95,14 +99,27 @@ class lotusProjector:
                 if should_update_subspace:
                     self.d_init = self.d_cur.detach().clone()
                     self.current_iteration = 1
+                    self.rho_init = self.rho_cur.detach().clone()
 
+                # if (self.current_iteration != 1) and (self.current_iteration % self.update_proj_gap == 0):
+                #     print(
+                #         "[CLEAR] "
+                #         f"global_iter={iter}, "
+                #         f"local_iter={self.current_iteration}, "
+                #         f"gamma={self.gamma:.6f}, "
+                #         f"rho_init={self.rho_init.detach().item():.6f}, "
+                #         f"rho_cur={self.rho_cur.detach().item():.6f}, "
+                #         f"compressed_cos={self.low_rank_fro_cos.detach().item():.6f}, "
+                #         f"lower={self.full_rank_fro_cos_lower.detach().item():.6f}, "
+                #         f"upper={self.full_rank_fro_cos_upper.detach().item():.6f}, "
+                #     )
 
                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 # calculate needed to reefresh or not
                 self.low_rank_fro_cos = torch.sum(self.d_cur * self.d_init)
-                self.full_rank_fro_cos_lower = self.low_rank_fro_cos * math.sqrt(self.rho_cur * self.rho_init) - math.sqrt((1 - self.rho_cur) * (1 - self.rho_init))
-                # self.full_rank_fro_cos_upper = self.low_rank_fro_cos * math.sqrt(self.rho_cur * self.rho_init) + math.sqrt((1 - self.rho_cur) * (1 - self.rho_init))
+                self.full_rank_fro_cos_lower = self.low_rank_fro_cos * torch.sqrt(self.rho_cur * self.rho_init) - torch.sqrt((1 - self.rho_cur) * (1 - self.rho_init))
+                self.full_rank_fro_cos_upper = self.low_rank_fro_cos * torch.sqrt(self.rho_cur * self.rho_init) + torch.sqrt((1 - self.rho_cur) * (1 - self.rho_init))
 
 
             else:
@@ -126,8 +143,11 @@ class lotusProjector:
                     low_rank_grad.float(),
                     ord="fro"
                 )
-                self.rho_cur = low_rank_grad_fro_norm / full_rank_grad_fro_norm
-
+                # self.rho_cur = low_rank_grad_fro_norm / full_rank_grad_fro_norm
+                self.rho_cur = (
+                        low_rank_grad_fro_norm.square()
+                        / full_rank_grad_fro_norm.square().clamp_min(1e-12)
+                ).clamp(0.0, 1.0)
                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 # calculate frobenius norm of current low rank gradient
@@ -142,13 +162,29 @@ class lotusProjector:
                 if should_update_subspace:
                     self.d_init = self.d_cur.detach().clone()
                     self.current_iteration = 1
+                    self.rho_init = self.rho_cur.detach().clone()
+
+
+                # if (self.current_iteration != 1) and (self.current_iteration % self.update_proj_gap == 0):
+                #     print(
+                #         "[CLEAR] "
+                #         f"global_iter={iter}, "
+                #         f"local_iter={self.current_iteration}, "
+                #         f"gamma={self.gamma:.6f}, "
+                #         f"rho_init={self.rho_init.detach().item():.6f}, "
+                #         f"rho_cur={self.rho_cur.detach().item():.6f}, "
+                #         f"compressed_cos={self.low_rank_fro_cos.detach().item():.6f}, "
+                #         f"lower={self.full_rank_fro_cos_lower.detach().item():.6f}, "
+                #         f"upper={self.full_rank_fro_cos_upper.detach().item():.6f}, "
+                #     )
+
 
                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 # calculate needed to reefresh or not
                 self.low_rank_fro_cos = torch.sum(self.d_cur * self.d_init)
-                self.full_rank_fro_cos_lower = self.low_rank_fro_cos * math.sqrt(self.rho_cur * self.rho_init) - math.sqrt((1 - self.rho_cur) * (1 - self.rho_init))
-                # self.full_rank_fro_cos_upper = self.low_rank_fro_cos * math.sqrt(self.rho_cur * self.rho_init) + math.sqrt((1 - self.rho_cur) * (1 - self.rho_init))
+                self.full_rank_fro_cos_lower = self.low_rank_fro_cos * torch.sqrt(self.rho_cur * self.rho_init) - torch.sqrt((1 - self.rho_cur) * (1 - self.rho_init))
+                self.full_rank_fro_cos_upper = self.low_rank_fro_cos * torch.sqrt(self.rho_cur * self.rho_init) + torch.sqrt((1 - self.rho_cur) * (1 - self.rho_init))
 
         elif self.proj_type == 'right':
             if should_update_subspace:
@@ -167,8 +203,11 @@ class lotusProjector:
                 low_rank_grad.float(),
                 ord="fro"
             )
-            self.rho_cur = low_rank_grad_fro_norm / full_rank_grad_fro_norm
-
+            # self.rho_cur = low_rank_grad_fro_norm / full_rank_grad_fro_norm
+            self.rho_cur = (
+                    low_rank_grad_fro_norm.square()
+                    / full_rank_grad_fro_norm.square().clamp_min(1e-12)
+            ).clamp(0.0, 1.0)
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # calculate frobenius norm of current low rank gradient
@@ -183,15 +222,32 @@ class lotusProjector:
             if should_update_subspace:
                 self.d_init = self.d_cur.detach().clone()
                 self.current_iteration = 1
+                self.rho_init = self.rho_cur.detach().clone()
+
+
+
+            # if (self.current_iteration != 1) and (self.current_iteration % self.update_proj_gap == 0):
+            #     print(
+            #         "[CLEAR] "
+            #         f"global_iter={iter}, "
+            #         f"local_iter={self.current_iteration}, "
+            #         f"gamma={self.gamma:.6f}, "
+            #         f"rho_init={self.rho_init.detach().item():.6f}, "
+            #         f"rho_cur={self.rho_cur.detach().item():.6f}, "
+            #         f"compressed_cos={self.low_rank_fro_cos.detach().item():.6f}, "
+            #         f"lower={self.full_rank_fro_cos_lower.detach().item():.6f}, "
+            #         f"upper={self.full_rank_fro_cos_upper.detach().item():.6f}, "
+            #     )
+
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # calculate needed to reefresh or not
             self.low_rank_fro_cos = torch.sum(self.d_cur * self.d_init)
-            self.full_rank_fro_cos_lower = self.low_rank_fro_cos * math.sqrt(self.rho_cur * self.rho_init) - math.sqrt(
+            self.full_rank_fro_cos_lower = self.low_rank_fro_cos * torch.sqrt(self.rho_cur * self.rho_init) - torch.sqrt(
                 (1 - self.rho_cur) * (1 - self.rho_init))
-            # self.full_rank_fro_cos_upper = self.low_rank_fro_cos * math.sqrt(self.rho_cur * self.rho_init) + math.sqrt(
-            #     (1 - self.rho_cur) * (1 - self.rho_init))
+            self.full_rank_fro_cos_upper = self.low_rank_fro_cos * torch.sqrt(self.rho_cur * self.rho_init) + torch.sqrt(
+                (1 - self.rho_cur) * (1 - self.rho_init))
 
         elif self.proj_type == 'left':
             if should_update_subspace:
@@ -210,8 +266,11 @@ class lotusProjector:
                 low_rank_grad.float(),
                 ord="fro"
             )
-            self.rho_cur = low_rank_grad_fro_norm / full_rank_grad_fro_norm
-
+            # self.rho_cur = low_rank_grad_fro_norm / full_rank_grad_fro_norm
+            self.rho_cur = (
+                    low_rank_grad_fro_norm.square()
+                    / full_rank_grad_fro_norm.square().clamp_min(1e-12)
+            ).clamp(0.0, 1.0)
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # calculate frobenius norm of current low rank gradient
@@ -226,15 +285,31 @@ class lotusProjector:
             if should_update_subspace:
                 self.d_init = self.d_cur.detach().clone()
                 self.current_iteration = 1
+                self.rho_init = self.rho_cur.detach().clone()
+
+
+
+            # if (self.current_iteration != 1) and (self.current_iteration % self.update_proj_gap == 0):
+            #     print(
+            #         "[CLEAR] "
+            #         f"global_iter={iter}, "
+            #         f"local_iter={self.current_iteration}, "
+            #         f"gamma={self.gamma:.6f}, "
+            #         f"rho_init={self.rho_init.detach().item():.6f}, "
+            #         f"rho_cur={self.rho_cur.detach().item():.6f}, "
+            #         f"compressed_cos={self.low_rank_fro_cos.detach().item():.6f}, "
+            #         f"lower={self.full_rank_fro_cos_lower.detach().item():.6f}, "
+            #         f"upper={self.full_rank_fro_cos_upper.detach().item():.6f}, "
+            #     )
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # calculate needed to reefresh or not
             self.low_rank_fro_cos = torch.sum(self.d_cur * self.d_init)
-            self.full_rank_fro_cos_lower = self.low_rank_fro_cos * math.sqrt(self.rho_cur * self.rho_init) - math.sqrt(
+            self.full_rank_fro_cos_lower = self.low_rank_fro_cos * torch.sqrt(self.rho_cur * self.rho_init) - torch.sqrt(
                 (1 - self.rho_cur) * (1 - self.rho_init))
-            # self.full_rank_fro_cos_upper = self.low_rank_fro_cos * math.sqrt(self.rho_cur * self.rho_init) + math.sqrt(
-            #     (1 - self.rho_cur) * (1 - self.rho_init))
+            self.full_rank_fro_cos_upper = self.low_rank_fro_cos * torch.sqrt(self.rho_cur * self.rho_init) + torch.sqrt(
+                (1 - self.rho_cur) * (1 - self.rho_init))
 
         elif self.proj_type == 'full':
             if should_update_subspace:
@@ -257,8 +332,11 @@ class lotusProjector:
                 low_rank_grad.float(),
                 ord="fro"
             )
-            self.rho_cur = low_rank_grad_fro_norm / full_rank_grad_fro_norm
-
+            # self.rho_cur = low_rank_grad_fro_norm / full_rank_grad_fro_norm
+            self.rho_cur = (
+                    low_rank_grad_fro_norm.square()
+                    / full_rank_grad_fro_norm.square().clamp_min(1e-12)
+            ).clamp(0.0, 1.0)
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # calculate frobenius norm of current low rank gradient
@@ -273,22 +351,38 @@ class lotusProjector:
             if should_update_subspace:
                 self.d_init = self.d_cur.detach().clone()
                 self.current_iteration = 1
+                self.rho_init = self.rho_cur.detach().clone()
+
+
+
+            # if (self.current_iteration != 1) and (self.current_iteration % self.update_proj_gap == 0):
+            #     print(
+            #         "[CLEAR] "
+            #         f"global_iter={iter}, "
+            #         f"local_iter={self.current_iteration}, "
+            #         f"gamma={self.gamma:.6f}, "
+            #         f"rho_init={self.rho_init.detach().item():.6f}, "
+            #         f"rho_cur={self.rho_cur.detach().item():.6f}, "
+            #         f"compressed_cos={self.low_rank_fro_cos.detach().item():.6f}, "
+            #         f"lower={self.full_rank_fro_cos_lower.detach().item():.6f}, "
+            #         f"upper={self.full_rank_fro_cos_upper.detach().item():.6f}, "
+            #     )
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # calculate needed to reefresh or not
             self.low_rank_fro_cos = torch.sum(self.d_cur * self.d_init)
-            self.full_rank_fro_cos_lower = self.low_rank_fro_cos * math.sqrt(self.rho_cur * self.rho_init) - math.sqrt(
+            self.full_rank_fro_cos_lower = self.low_rank_fro_cos * torch.sqrt(self.rho_cur * self.rho_init) - torch.sqrt(
                 (1 - self.rho_cur) * (1 - self.rho_init))
-            # self.full_rank_fro_cos_upper = self.low_rank_fro_cos * math.sqrt(self.rho_cur * self.rho_init) + math.sqrt(
-            #     (1 - self.rho_cur) * (1 - self.rho_init))
+            self.full_rank_fro_cos_upper = self.low_rank_fro_cos * torch.sqrt(self.rho_cur * self.rho_init) + torch.sqrt(
+                (1 - self.rho_cur) * (1 - self.rho_init))
 
         else:
             raise ValueError("proj_type should be std, right, left, or full")
 
-        self.adaptive_projection_changing = (self.current_iteration != 1) and (self.current_iteration % self.update_proj_gap == 0) and (self.full_rank_fro_cos_lower < self.gamma)
+        self.adaptive_projection_changing = (self.current_iteration != 1) and (self.current_iteration % self.update_proj_gap == 0) and ((self.full_rank_fro_cos_lower + self.full_rank_fro_cos_upper) < self.gamma)
 
-        return low_rank_grad
+        return low_rank_grad, should_update_subspace
 
     def project_back(self, low_rank_grad):
         if self.proj_type == 'std':

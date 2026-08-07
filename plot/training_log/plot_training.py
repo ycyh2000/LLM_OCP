@@ -78,7 +78,7 @@ def collect_json_files(json_dir):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--json_dir", type=str, required=True)
+    parser.add_argument("--json_dir", type=str, default="./figure_json")
     parser.add_argument("--save_dir", type=str, default="./figures")
     args = parser.parse_args()
 

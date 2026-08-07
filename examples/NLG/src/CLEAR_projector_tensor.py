@@ -2,7 +2,7 @@ import torch
 from tensorly import tenalg
 import math
 
-class lotusProjectorTensor:
+class CLEARProjectorTensor:
     """
     Tensor projector using randomized power-iteration SVD-style subspace estimation.
 
@@ -55,6 +55,7 @@ class lotusProjectorTensor:
         self.full_rank_fro_cos_lower = 0
         self.full_rank_fro_cos_upper = 0
         self.gamma = gamma
+        self.current_iteration = 0
 
 
     def project(self, full_rank_grad, iter):
@@ -85,8 +86,11 @@ class lotusProjectorTensor:
             self.transformed_low_rank.float(),
             ord="fro"
         )
-        self.rho_cur = low_rank_grad_fro_norm / full_rank_grad_fro_norm
-
+        # self.rho_cur = low_rank_grad_fro_norm / full_rank_grad_fro_norm
+        self.rho_cur = (
+                low_rank_grad_fro_norm.square()
+                / full_rank_grad_fro_norm.square().clamp_min(1e-12)
+        )
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # calculate frobenius norm of current low rank gradient
@@ -103,17 +107,18 @@ class lotusProjectorTensor:
         if should_update_subspace:
             self.d_init = self.d_cur.detach().clone()
             self.current_iteration = 1
+            self.rho_init = self.rho_cur.detach().clone()
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # calculate needed to reefresh or not
         self.low_rank_fro_cos = torch.sum(self.d_cur * self.d_init)
-        self.full_rank_fro_cos_lower = self.low_rank_fro_cos * math.sqrt(self.rho_cur * self.rho_init) - math.sqrt(
+        self.full_rank_fro_cos_lower = self.low_rank_fro_cos * torch.sqrt(self.rho_cur * self.rho_init) - torch.sqrt(
             (1 - self.rho_cur) * (1 - self.rho_init))
-        # self.full_rank_fro_cos_upper = self.low_rank_fro_cos * math.sqrt(self.rho_cur * self.rho_init) + math.sqrt((1 - self.rho_cur) * (1 - self.rho_init))
+        self.full_rank_fro_cos_upper = self.low_rank_fro_cos * torch.sqrt(self.rho_cur * self.rho_init) + torch.sqrt((1 - self.rho_cur) * (1 - self.rho_init))
 
 
-        self.adaptive_projection_changing = (self.current_iteration != 1) and (self.current_iteration % self.update_proj_gap == 0) and (self.full_rank_fro_cos_lower < self.gamma)
+        self.adaptive_projection_changing = (self.current_iteration != 1) and (self.current_iteration % self.update_proj_gap == 0) and ((self.full_rank_fro_cos_lower + self.full_rank_fro_cos_upper)< self.gamma)
 
 
         return self.transformed_low_rank
